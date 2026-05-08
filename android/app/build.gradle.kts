@@ -42,8 +42,8 @@ android {
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("demo")
-            // 👇 EDIT this line after deploying backend to Render (or anywhere). Must be HTTPS.
-            buildConfigField("String", "API_URL", "\"https://CHANGE-ME.onrender.com\"")
+            // Render-deployed backend (HTTPS required for release builds).
+            buildConfigField("String", "API_URL", "\"https://fieldpharma-api.onrender.com\"")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
