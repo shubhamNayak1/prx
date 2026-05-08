@@ -179,6 +179,7 @@ fun NewExpenseScreen(onBack: () -> Unit, onCreated: () -> Unit) {
                     if (amt == null) { err = "Enter a valid amount"; return@Button }
                     saving = true; err = null
                     scope.launch {
+                        val geo = app.locationProvider.current()
                         runCatching {
                             app.expenseRepo.submit(
                                 ExpenseReq(
@@ -191,6 +192,8 @@ fun NewExpenseScreen(onBack: () -> Unit, onCreated: () -> Unit) {
                                     distanceKm = distance.toDoubleOrNull(),
                                     modeOfTravel = modeOfTravel.ifBlank { null },
                                     remarks = remarks.ifBlank { null },
+                                    actionLat = geo?.lat,
+                                    actionLng = geo?.lng,
                                 ),
                                 billFile = if (type == "ACTUAL") bill else null,
                             )

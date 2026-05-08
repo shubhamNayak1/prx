@@ -94,6 +94,9 @@ fun NewClientScreen(onBack: () -> Unit, onCreated: () -> Unit) {
                     saving = true
                     err = null
                     scope.launch {
+                        // Capture rep's GPS — used as the client's location since
+                        // reps usually add clients while standing in the office/clinic.
+                        val geo = app.locationProvider.current()
                         runCatching {
                             app.clientRepo.create(ClientCreateReq(
                                 name = name.trim(),
@@ -101,6 +104,8 @@ fun NewClientScreen(onBack: () -> Unit, onCreated: () -> Unit) {
                                 speciality = speciality.ifBlank { null },
                                 city = city.ifBlank { null },
                                 phone = phone.ifBlank { null },
+                                latitude = geo?.lat,
+                                longitude = geo?.lng,
                             ))
                         }.onSuccess { onCreated() }
                             .onFailure { err = it.message; saving = false }

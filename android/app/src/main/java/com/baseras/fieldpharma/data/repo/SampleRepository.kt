@@ -20,8 +20,20 @@ class SampleRepository(
     }
 
     /** Distribute sample. Foreground attempt; queues if offline. */
-    suspend fun distribute(issueId: String, quantity: Int, visitId: String? = null): Result<Unit> {
-        val req = SampleDistReq(sampleIssueId = issueId, quantity = quantity, visitId = visitId)
+    suspend fun distribute(
+        issueId: String,
+        quantity: Int,
+        visitId: String? = null,
+        lat: Double? = null,
+        lng: Double? = null,
+    ): Result<Unit> {
+        val req = SampleDistReq(
+            sampleIssueId = issueId,
+            quantity = quantity,
+            visitId = visitId,
+            actionLat = lat,
+            actionLng = lng,
+        )
         return try {
             api.distributeSample(req)
             Result.success(Unit)

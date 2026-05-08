@@ -22,7 +22,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class SamplesViewModel(private val repo: SampleRepository) : ViewModel() {
+class SamplesViewModel(
+    private val repo: SampleRepository,
+    private val location: com.baseras.fieldpharma.location.LocationProvider,
+) : ViewModel() {
     private val _balance = MutableStateFlow<List<SampleBalanceDto>>(emptyList())
     val balance = _balance.asStateFlow()
     val loading = MutableStateFlow(false)
@@ -40,7 +43,8 @@ class SamplesViewModel(private val repo: SampleRepository) : ViewModel() {
 
     fun distribute(issueId: String, qty: Int) {
         viewModelScope.launch {
-            repo.distribute(issueId, qty).onSuccess {
+            val geo = location.current()
+            repo.distribute(issueId, qty, lat = geo?.lat, lng = geo?.lng).onSuccess {
                 msg.value = "Recorded $qty unit(s)"
                 refresh()
             }
@@ -53,7 +57,7 @@ class SamplesViewModel(private val repo: SampleRepository) : ViewModel() {
 fun SamplesScreen(onBack: () -> Unit) {
     val app = FieldPharmaApp.instance
     val vm: SamplesViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
-        addInitializer(SamplesViewModel::class) { SamplesViewModel(app.sampleRepo) }
+        addInitializer(SamplesViewModel::class) { SamplesViewModel(app.sampleRepo, app.locationProvider) }
     })
     val balance by vm.balance.collectAsState()
     val loading by vm.loading.collectAsState()

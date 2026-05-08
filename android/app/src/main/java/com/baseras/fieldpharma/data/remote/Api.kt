@@ -201,6 +201,7 @@ data class ExpenseReq(
     val fromLocation: String? = null, val toLocation: String? = null,
     val distanceKm: Double? = null, val modeOfTravel: String? = null,
     val billPhoto: String? = null, val remarks: String? = null,
+    val actionLat: Double? = null, val actionLng: Double? = null,
 )
 
 @Serializable
@@ -242,6 +243,7 @@ data class SampleBalanceDto(
 @Serializable
 data class SampleDistReq(
     val sampleIssueId: String, val visitId: String? = null, val quantity: Int,
+    val actionLat: Double? = null, val actionLng: Double? = null,
 )
 
 @Serializable
@@ -280,6 +282,7 @@ data class RcpaReq(
     val ourBrand: String, val ourQuantity: Int,
     val competitorBrand: String, val competitorQuantity: Int,
     val remarks: String? = null,
+    val actionLat: Double? = null, val actionLng: Double? = null,
 )
 
 @Serializable

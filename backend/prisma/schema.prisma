@@ -193,10 +193,12 @@ model Expense {
   type         ExpenseType
   category     String?       // For ACTUAL: "Hotel", "Food", "Transport"
   amount       Decimal       @db.Decimal(10, 2)
-  fromLocation String?       // For TA
+  fromLocation String?       // For TA — text label like "Pune"
   toLocation   String?
   distanceKm   Float?
   modeOfTravel String?       // bus / train / auto / own_vehicle
+  actionLat    Float?        // Rep's GPS at the moment of submission
+  actionLng    Float?
   billPhoto    String?
   status       ExpenseStatus @default(PENDING)
   approvedBy   String?
@@ -257,6 +259,8 @@ model SampleDistribution {
   user          User        @relation(fields: [userId], references: [id])
   quantity      Int
   distributedAt DateTime    @default(now())
+  actionLat     Float?      // Rep's GPS at the moment of distribution
+  actionLng     Float?
 }
 
 // ───────────────────────── E-Detailing ─────────────────────────
@@ -295,6 +299,8 @@ model RcpaEntry {
   competitorBrand    String
   competitorQuantity Int
   remarks            String?
+  actionLat          Float?   // Rep's GPS at moment of audit
+  actionLng          Float?
   createdAt          DateTime @default(now())
 
   @@index([userId, date])

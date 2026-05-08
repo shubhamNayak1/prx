@@ -135,12 +135,15 @@ fun NewRcpaScreen(onBack: () -> Unit, onCreated: () -> Unit) {
                     }
                     saving = true; err = null
                     scope.launch {
+                        val geo = app.locationProvider.current()
                         runCatching {
                             app.rcpaRepo.submit(RcpaReq(
                                 clientId = clientId, date = date,
                                 ourBrand = ourBrand.trim(), ourQuantity = oq,
                                 competitorBrand = compBrand.trim(), competitorQuantity = cq,
                                 remarks = remarks.ifBlank { null },
+                                actionLat = geo?.lat,
+                                actionLng = geo?.lng,
                             ))
                         }.onSuccess { onCreated() }
                             .onFailure { err = it.message; saving = false }

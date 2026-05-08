@@ -81,6 +81,8 @@ const distSchema = z.object({
   sampleIssueId: z.string(),
   visitId: z.string().optional(),
   quantity: z.number().int().positive(),
+  actionLat: z.number().optional(),
+  actionLng: z.number().optional(),
 });
 
 router.post('/distributions', async (req, res) => {
@@ -105,6 +107,8 @@ router.post('/distributions', async (req, res) => {
       visitId: parsed.data.visitId,
       quantity: parsed.data.quantity,
       userId: req.auth!.userId,
+      actionLat: parsed.data.actionLat,
+      actionLng: parsed.data.actionLng,
     },
   });
   res.status(201).json({ distribution: dist });

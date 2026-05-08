@@ -18,6 +18,8 @@ const expenseSchema = z.object({
   modeOfTravel: z.string().optional(),
   billPhoto: z.string().optional(),
   remarks: z.string().optional(),
+  actionLat: z.number().optional(),
+  actionLng: z.number().optional(),
 });
 
 router.post('/', async (req, res) => {
@@ -39,6 +41,8 @@ router.post('/', async (req, res) => {
       modeOfTravel: data.modeOfTravel,
       billPhoto: data.billPhoto,
       remarks: data.remarks,
+      actionLat: data.actionLat,
+      actionLng: data.actionLng,
     },
   });
   res.status(201).json({ expense });

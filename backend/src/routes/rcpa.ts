@@ -15,6 +15,8 @@ const rcpaSchema = z.object({
   competitorBrand: z.string().min(1),
   competitorQuantity: z.number().int().nonnegative(),
   remarks: z.string().optional(),
+  actionLat: z.number().optional(),
+  actionLng: z.number().optional(),
 });
 
 router.post('/', async (req, res) => {
