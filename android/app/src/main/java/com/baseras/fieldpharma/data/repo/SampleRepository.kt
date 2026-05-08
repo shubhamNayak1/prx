@@ -5,6 +5,7 @@ import com.baseras.fieldpharma.data.local.PendingSyncEntity
 import com.baseras.fieldpharma.data.remote.Api
 import com.baseras.fieldpharma.data.remote.SampleBalanceDto
 import com.baseras.fieldpharma.data.remote.SampleDistReq
+import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -31,6 +32,7 @@ class SampleRepository(
                     payloadJson = json.encodeToString(req),
                 )
             )
+            SyncTrigger.fire()
             Result.success(Unit) // queued
         }
     }

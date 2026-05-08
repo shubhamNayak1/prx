@@ -7,6 +7,7 @@ import com.baseras.fieldpharma.data.remote.ExpenseDto
 import com.baseras.fieldpharma.data.remote.ExpensePolicyDto
 import com.baseras.fieldpharma.data.remote.ExpenseReq
 import com.baseras.fieldpharma.data.remote.UploadHelper
+import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -40,6 +41,7 @@ class ExpenseRepository(
                     localPhotoPath = billFile?.absolutePath,
                 )
             )
+            SyncTrigger.fire()
         }
     }
 

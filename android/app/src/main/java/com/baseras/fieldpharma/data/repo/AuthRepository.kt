@@ -11,9 +11,6 @@ class AuthRepository(
 ) {
     suspend fun login(email: String, password: String): Result<AuthUser> = runCatching {
         val res = api.login(LoginReq(email, password))
-        if (res.user.role != "MR") {
-            error("Only MR accounts can sign in here. Use admin panel for managers.")
-        }
         authStore.token = res.token
         val u = AuthUser(res.user.id, res.user.email, res.user.name, res.user.role)
         authStore.user = u

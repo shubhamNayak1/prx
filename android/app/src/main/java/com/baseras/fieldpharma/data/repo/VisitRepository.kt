@@ -4,6 +4,7 @@ import com.baseras.fieldpharma.data.local.VisitDao
 import com.baseras.fieldpharma.data.local.VisitEntity
 import com.baseras.fieldpharma.data.remote.Api
 import com.baseras.fieldpharma.data.remote.VisitReq
+import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -72,6 +73,8 @@ class VisitRepository(
             dao.markSynced(v.localId, res.visit.id)
             true
         } catch (t: Throwable) {
+            // Schedule a real-time retry as soon as network is back.
+            SyncTrigger.fire()
             false
         }
     }

@@ -5,6 +5,7 @@ import com.baseras.fieldpharma.data.local.PendingSyncEntity
 import com.baseras.fieldpharma.data.remote.Api
 import com.baseras.fieldpharma.data.remote.RcpaDto
 import com.baseras.fieldpharma.data.remote.RcpaReq
+import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -26,6 +27,7 @@ class RcpaRepository(
                     payloadJson = json.encodeToString(req),
                 )
             )
+            SyncTrigger.fire()
         }
     }
 

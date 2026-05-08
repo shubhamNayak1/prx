@@ -75,7 +75,7 @@ fun LoginScreen(onSignedIn: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(4.dp))
-            Text("Medical Rep Sign-in", style = MaterialTheme.typography.bodyMedium)
+            Text("Sign in", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(32.dp))
 
             OutlinedTextField(

@@ -8,6 +8,7 @@ import com.baseras.fieldpharma.data.local.SlideDao
 import com.baseras.fieldpharma.data.local.SlideEntity
 import com.baseras.fieldpharma.data.remote.Api
 import com.baseras.fieldpharma.data.remote.EdetailViewReq
+import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -51,6 +52,7 @@ class EdetailRepository(
                     payloadJson = json.encodeToString(req),
                 )
             )
+            SyncTrigger.fire()
         }
     }
 

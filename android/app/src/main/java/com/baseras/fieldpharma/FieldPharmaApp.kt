@@ -14,6 +14,7 @@ import com.baseras.fieldpharma.data.repo.SampleRepository
 import com.baseras.fieldpharma.data.repo.TourPlanRepository
 import com.baseras.fieldpharma.data.repo.VisitRepository
 import com.baseras.fieldpharma.location.LocationProvider
+import com.baseras.fieldpharma.sync.SyncTrigger
 import com.baseras.fieldpharma.sync.scheduleSync
 
 class FieldPharmaApp : Application() {
@@ -36,6 +37,7 @@ class FieldPharmaApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        SyncTrigger.init(this)
         authStore = AuthStore(this)
         db = AppDatabase.create(this)
         val (apiInstance, _) = ApiClient.create(BuildConfig.API_URL, authStore)

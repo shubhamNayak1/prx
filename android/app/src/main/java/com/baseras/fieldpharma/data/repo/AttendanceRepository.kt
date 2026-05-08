@@ -7,6 +7,7 @@ import com.baseras.fieldpharma.data.local.PendingSyncEntity
 import com.baseras.fieldpharma.data.remote.Api
 import com.baseras.fieldpharma.data.remote.PunchReq
 import com.baseras.fieldpharma.data.remote.UploadHelper
+import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -59,6 +60,7 @@ class AttendanceRepository(
                     localPhotoPath = photoFile?.absolutePath,
                 )
             )
+            SyncTrigger.fire()
         }
     }
 
@@ -83,6 +85,7 @@ class AttendanceRepository(
                     payloadJson = json.encodeToString(PunchReq(date, nowIso, lat, lng)),
                 )
             )
+            SyncTrigger.fire()
         }
     }
 
