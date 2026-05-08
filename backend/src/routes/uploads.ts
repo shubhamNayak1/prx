@@ -22,7 +22,7 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB cap
   fileFilter: (_req, file, cb) => {
     const ok = /^image\/(jpeg|png|webp|heic|heif)$/.test(file.mimetype);
-    cb(ok ? null : new Error('Only image uploads allowed'), ok);
+    cb(null, ok);
   },
 });
 
