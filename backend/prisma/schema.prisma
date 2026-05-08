@@ -1,0 +1,302 @@
+// Baseras FieldPharma — database schema
+// Designed up-front to cover all phases (attendance, tour plan, DCR, expense, sample, e-detail, RCPA)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Tenancy & users ─────────────────────────
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users          User[]
+  clients        Client[]
+  sampleProducts SampleProduct[]
+  edetailDecks   EdetailDeck[]
+  expensePolicies ExpensePolicy[]
+}
+
+enum Role {
+  ADMIN   // Full access — Baseras / company HQ
+  MANAGER // Field manager — sees their downstream hierarchy
+  MR      // Medical Representative — field user
+}
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  name         String
+  role         Role
+  employeeCode String?  @unique
+  grade        String?  // Tier for TA/DA, e.g., "MR1", "ASM", "RSM"
+  managerId    String?
+  manager      User?    @relation("Hierarchy", fields: [managerId], references: [id])
+  reports      User[]   @relation("Hierarchy")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  attendance          Attendance[]
+  tourPlans           TourPlan[]
+  visits              Visit[]
+  expenses            Expense[]
+  sampleIssues        SampleIssue[]
+  sampleDistributions SampleDistribution[]
+  rcpaEntries         RcpaEntry[]
+
+  @@index([companyId])
+  @@index([managerId])
+}
+
+// ───────────────────────── Clients (doctors/chemists/stockists) ─────────────────────────
+
+enum ClientType {
+  DOCTOR
+  CHEMIST
+  STOCKIST
+  HOSPITAL
+}
+
+model Client {
+  id          String     @id @default(cuid())
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  name        String
+  type        ClientType
+  speciality  String?    // For doctors: Cardiology, Pediatrics, etc.
+  address     String?
+  city        String?
+  pincode     String?
+  phone       String?
+  email       String?
+  latitude    Float?
+  longitude   Float?
+  createdById String?
+  createdAt   DateTime   @default(now())
+
+  visits      Visit[]
+  rcpaEntries RcpaEntry[]
+  tourEntries TourPlanEntry[]
+
+  @@index([companyId, type])
+}
+
+// ───────────────────────── Attendance ─────────────────────────
+
+model Attendance {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  date         DateTime  @db.Date
+  punchInAt    DateTime?
+  punchInLat   Float?
+  punchInLng   Float?
+  punchInPhoto String?
+  punchOutAt   DateTime?
+  punchOutLat  Float?
+  punchOutLng  Float?
+
+  @@unique([userId, date])
+}
+
+// ───────────────────────── Tour planning ─────────────────────────
+
+enum TourPlanStatus {
+  PLANNED
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model TourPlan {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+  date       DateTime       @db.Date
+  status     TourPlanStatus @default(PLANNED)
+  approvedBy String?
+  notes      String?
+  createdAt  DateTime       @default(now())
+
+  entries TourPlanEntry[]
+
+  @@unique([userId, date])
+}
+
+model TourPlanEntry {
+  id         String   @id @default(cuid())
+  tourPlanId String
+  tourPlan   TourPlan @relation(fields: [tourPlanId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id])
+  area       String?  // Free-text area for "field day" plans without a specific client
+  notes      String?
+}
+
+// ───────────────────────── Visits / DCR / Joint working ─────────────────────────
+
+model Visit {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id])
+  clientId            String
+  client              Client    @relation(fields: [clientId], references: [id])
+  checkInAt           DateTime
+  checkInLat          Float?
+  checkInLng          Float?
+  checkOutAt          DateTime?
+  checkOutLat         Float?
+  checkOutLng         Float?
+  isJointWork         Boolean   @default(false)
+  jointWithUserId     String?   // Manager who joined the visit
+  productsDiscussed   String[]
+  notes               String?
+  edetailViewedSlides Json?     // {slideId: durationSeconds}
+  createdAt           DateTime  @default(now())
+
+  sampleDistributions SampleDistribution[]
+
+  @@index([userId, checkInAt])
+  @@index([clientId])
+}
+
+// ───────────────────────── Expenses (TA / DA / Actuals) ─────────────────────────
+
+enum ExpenseType {
+  TA     // Travel Allowance (per km)
+  DA     // Daily Allowance (flat per-day)
+  ACTUAL // Hotel/food/etc with bill upload
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Expense {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  date         DateTime      @db.Date
+  type         ExpenseType
+  category     String?       // For ACTUAL: "Hotel", "Food", "Transport"
+  amount       Decimal       @db.Decimal(10, 2)
+  fromLocation String?       // For TA
+  toLocation   String?
+  distanceKm   Float?
+  modeOfTravel String?       // bus / train / auto / own_vehicle
+  billPhoto    String?
+  status       ExpenseStatus @default(PENDING)
+  approvedBy   String?
+  remarks      String?
+  createdAt    DateTime      @default(now())
+
+  @@index([userId, date])
+}
+
+// Per-grade TA/DA rate config (admin-editable)
+model ExpensePolicy {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  grade       String   // "MR1", "ASM" etc.
+  taRatePerKm Decimal  @db.Decimal(10, 2)
+  daFlatRate  Decimal  @db.Decimal(10, 2)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, grade])
+}
+
+// ───────────────────────── Samples / gifts ─────────────────────────
+
+model SampleProduct {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  unitType  String   @default("strip") // strip / bottle / packet
+  isGift    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  issues SampleIssue[]
+}
+
+model SampleIssue {
+  id        String        @id @default(cuid())
+  productId String
+  product   SampleProduct @relation(fields: [productId], references: [id])
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  quantity  Int
+  issuedAt  DateTime      @default(now())
+
+  distributions SampleDistribution[]
+
+  @@index([userId])
+}
+
+model SampleDistribution {
+  id            String      @id @default(cuid())
+  sampleIssueId String
+  sampleIssue   SampleIssue @relation(fields: [sampleIssueId], references: [id])
+  visitId       String?
+  visit         Visit?      @relation(fields: [visitId], references: [id])
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  quantity      Int
+  distributedAt DateTime    @default(now())
+}
+
+// ───────────────────────── E-Detailing ─────────────────────────
+
+model EdetailDeck {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  product   String?
+  createdAt DateTime @default(now())
+
+  slides EdetailSlide[]
+}
+
+model EdetailSlide {
+  id       String      @id @default(cuid())
+  deckId   String
+  deck     EdetailDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  order    Int
+  title    String?
+  imageUrl String      // S3 / CDN URL — Android caches for offline use
+}
+
+// ───────────────────────── RCPA (Retail Chemist Prescription Audit) ─────────────────────────
+
+model RcpaEntry {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  clientId           String   // Chemist
+  client             Client   @relation(fields: [clientId], references: [id])
+  date               DateTime @db.Date
+  ourBrand           String
+  ourQuantity        Int
+  competitorBrand    String
+  competitorQuantity Int
+  remarks            String?
+  createdAt          DateTime @default(now())
+
+  @@index([userId, date])
+  @@index([clientId])
+}

@@ -1,0 +1,31 @@
+# Render Blueprint for the FieldPharma backend.
+# Connects to a Neon (or any Postgres) DB via the DATABASE_URL env var.
+#
+# Usage:
+#   1. Push this repo to GitHub
+#   2. dashboard.render.com → New → Blueprint → pick the repo
+#   3. Set DATABASE_URL in the Render env-vars dialog (paste your Neon connection string)
+#   4. Render auto-runs migrations + starts the API
+
+services:
+  - type: web
+    name: fieldpharma-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    # `--include=dev` keeps Prisma CLI + tsc available at build time (Render sets
+    # NODE_ENV=production for npm install). Migrations run on every deploy.
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build && npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false        # set this manually in the Render dashboard (paste from Neon)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      - key: CORS_ORIGIN
+        value: "*"         # tighten to your admin URL once Vercel/admin is deployed

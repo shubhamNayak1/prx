@@ -1,0 +1,21 @@
+node_modules/
+.next/
+dist/
+build/
+uploads/
+*.log
+.env
+.env.local
+.DS_Store
+.vscode/
+.idea/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.cxx/
+*.apk
+*.aab
+*.keystore
