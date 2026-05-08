@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- White medical plus glyph centered in the 66dp safe zone (27..81) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,32 L62,32 L62,46 L76,46 L76,62 L62,62 L62,76 L46,76 L46,62 L32,62 L32,46 L46,46 Z" />
+</vector>
