@@ -1,7 +1,6 @@
 package com.baseras.fieldpharma
 
 import android.app.Application
-import androidx.work.Configuration
 import com.baseras.fieldpharma.auth.AuthStore
 import com.baseras.fieldpharma.data.local.AppDatabase
 import com.baseras.fieldpharma.data.remote.ApiClient
@@ -17,7 +16,7 @@ import com.baseras.fieldpharma.data.repo.VisitRepository
 import com.baseras.fieldpharma.location.LocationProvider
 import com.baseras.fieldpharma.sync.scheduleSync
 
-class FieldPharmaApp : Application(), Configuration.Provider {
+class FieldPharmaApp : Application() {
     lateinit var authStore: AuthStore
     lateinit var db: AppDatabase
     lateinit var api: com.baseras.fieldpharma.data.remote.Api
@@ -54,9 +53,6 @@ class FieldPharmaApp : Application(), Configuration.Provider {
 
         scheduleSync(this)
     }
-
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().build()
 
     companion object {
         lateinit var instance: FieldPharmaApp
