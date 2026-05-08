@@ -21,14 +21,25 @@ android {
     }
 
     signingConfigs {
-        // Reuses the auto-generated debug keystore so a release APK can be built
-        // without keystore management. NOT for the Play Store — this is for sideloaded
-        // demo APKs only. For production, generate a real keystore + use App Signing.
+        // For sideloaded demo APKs only — NOT for the Play Store.
+        //
+        // CI builds (GitHub Actions): keystore + passwords come from env vars
+        //   (workflow generates a fresh keystore each run).
+        // Local builds: falls back to Android Studio's auto-generated debug keystore
+        //   at ~/.android/debug.keystore.
         create("demo") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val envKeystore = System.getenv("KEYSTORE_PATH")
+            if (envKeystore != null && file(envKeystore).exists()) {
+                storeFile = file(envKeystore)
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "demo123"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "demo"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "demo123"
+            } else {
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
