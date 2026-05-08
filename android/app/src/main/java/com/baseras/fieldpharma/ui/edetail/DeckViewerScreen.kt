@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.baseras.fieldpharma.FieldPharmaApp
 import com.baseras.fieldpharma.data.local.SlideEntity
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +47,7 @@ fun DeckViewerScreen(deckId: String, onClose: () -> Unit) {
         onDispose {
             // Fire-and-forget tracking on close
             val snapshot = viewSeconds.toMap()
-            kotlinx.coroutines.MainScope().launch {
+            MainScope().launch {
                 app.edetailRepo.trackViews(visitId = null, slideViewSeconds = snapshot)
             }
         }
@@ -101,5 +103,3 @@ fun DeckViewerScreen(deckId: String, onClose: () -> Unit) {
     }
 }
 
-private fun kotlinx.coroutines.CoroutineScope.launch(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) =
-    kotlinx.coroutines.launch(block = block)
