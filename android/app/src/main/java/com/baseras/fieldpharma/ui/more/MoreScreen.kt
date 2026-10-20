@@ -48,6 +48,7 @@ fun MoreScreen(
     onEdetail: () -> Unit = {},
     onRcpa: () -> Unit = {},
     onReports: () -> Unit = {},
+    onInvite: () -> Unit = {},
     onHelp: () -> Unit = {},
     onLogout: () -> Unit,
 ) {
@@ -75,6 +76,7 @@ fun MoreScreen(
             MoreItem(Icons.AutoMirrored.Filled.Logout, "Sign out", null, onLogout, danger = true),
         )
         MoreVariant.Admin -> listOf(
+            MoreItem(Icons.Default.PersonAdd, "Invite user", "Add a Field Person or Manager", onInvite),
             MoreItem(Icons.Default.CreditCard, "Billing", "Plan, invoices, GSTIN", onBilling),
             MoreItem(Icons.Default.AccountTree, "Hierarchy", "Org chart & reporting lines", onHierarchy),
             MoreItem(Icons.Default.Analytics, "Reports", "Company-wide KPIs & charts", onReports),

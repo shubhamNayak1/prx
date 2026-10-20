@@ -5,7 +5,6 @@ import com.baseras.fieldpharma.FieldPharmaApp
 
 @Composable
 fun HomeRouter(
-    onAttendance: () -> Unit,
     onClients: () -> Unit,
     onTourPlans: () -> Unit,
     onVisits: () -> Unit,
@@ -17,13 +16,15 @@ fun HomeRouter(
     onTeam: () -> Unit,
     onBilling: () -> Unit,
     onReports: () -> Unit,
+    onInvite: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val role = FieldPharmaApp.instance.authRepo.current?.role ?: "FIELD_PERSON"
     when (role) {
         "ADMIN" -> AdminHomeScreen(
-            onPeople = onTeam,       // Admin → "People" opens team / users
+            onPeople = onTeam,
+            onInvite = onInvite,
             onBilling = onBilling,
             onMore = onMore,
             onLogout = onLogout,
@@ -42,7 +43,6 @@ fun HomeRouter(
             onLogout = onLogout,
         )
         else -> HomeScreen(
-            onAttendance = onAttendance,
             onClients = onClients,
             onTourPlans = onTourPlans,
             onVisits = onVisits,

@@ -47,6 +47,7 @@ data class AdminHomeState(
 @Composable
 fun AdminHomeScreen(
     onPeople: () -> Unit,
+    onInvite: () -> Unit,
     onBilling: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
@@ -74,6 +75,7 @@ fun AdminHomeScreen(
     AdminHomeScaffold(
         state = state,
         onPeople = onPeople,
+        onInvite = onInvite,
         onBilling = onBilling,
         onMore = onMore,
         onLogout = onLogout,
@@ -87,6 +89,7 @@ fun AdminHomeScreen(
 private fun AdminHomeScaffold(
     state: AdminHomeState,
     onPeople: () -> Unit,
+    onInvite: () -> Unit,
     onBilling: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
@@ -162,11 +165,10 @@ private fun AdminHomeScaffold(
             item {
                 QuickActionsRow(
                     actions = listOf(
-                        QuickAction("Invite user", Icons.Default.PersonAdd, onPeople),
+                        QuickAction("Invite user", Icons.Default.PersonAdd, onInvite),
                         QuickAction("Billing", Icons.Default.CreditCard, onBilling),
-                        QuickAction("Hierarchy", Icons.Default.AccountTree) { /* TODO */ },
-                        QuickAction("Clients", Icons.Default.LocalHospital) { /* TODO */ },
-                        QuickAction("Settings", Icons.Default.Settings, onMore),
+                        QuickAction("People", Icons.Default.People, onPeople),
+                        QuickAction("More", Icons.Default.Settings, onMore),
                     ),
                 )
             }
@@ -423,7 +425,7 @@ private fun AdminHomePreviewTrial() {
                 pendingSignups = 0,
                 billing = BillingSnapshot(BillingStatus.TRIAL, cycle = null, trialEndsAt = null, fetchedAt = 0L),
             ),
-            onPeople = {}, onBilling = {}, onMore = {}, onLogout = {},
+            onPeople = {}, onInvite = {}, onBilling = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -443,7 +445,7 @@ private fun AdminHomePreviewActive() {
                 pendingSignups = 3,
                 billing = BillingSnapshot(BillingStatus.ACTIVE, cycle = "ANNUAL", trialEndsAt = null, fetchedAt = 0L),
             ),
-            onPeople = {}, onBilling = {}, onMore = {}, onLogout = {},
+            onPeople = {}, onInvite = {}, onBilling = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -463,7 +465,7 @@ private fun AdminHomePreviewLocked() {
                 pendingSignups = 0,
                 billing = BillingSnapshot(BillingStatus.LOCKED, cycle = null, trialEndsAt = null, fetchedAt = 0L),
             ),
-            onPeople = {}, onBilling = {}, onMore = {}, onLogout = {},
+            onPeople = {}, onInvite = {}, onBilling = {}, onMore = {}, onLogout = {},
         )
     }
 }

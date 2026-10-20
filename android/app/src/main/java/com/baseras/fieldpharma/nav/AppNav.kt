@@ -12,13 +12,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.baseras.fieldpharma.FieldPharmaApp
 import com.baseras.fieldpharma.auth.AuthEvent
-import com.baseras.fieldpharma.ui.attendance.AttendanceScreen
 import com.baseras.fieldpharma.ui.clients.ClientsScreen
 import com.baseras.fieldpharma.ui.clients.NewClientScreen
 import com.baseras.fieldpharma.ui.edetail.DecksScreen
 import com.baseras.fieldpharma.ui.edetail.DeckViewerScreen
 import com.baseras.fieldpharma.ui.expense.ExpensesScreen
 import com.baseras.fieldpharma.ui.expense.NewExpenseScreen
+import com.baseras.fieldpharma.ui.help.HelpScreen
+import com.baseras.fieldpharma.ui.invite.InviteUserScreen
+import com.baseras.fieldpharma.ui.profile.ProfileScreen
+import com.baseras.fieldpharma.ui.settings.SettingsScreen
+import com.baseras.fieldpharma.ui.settings.SettingsVariant
 import com.baseras.fieldpharma.ui.approvals.ApprovalsScreen
 import com.baseras.fieldpharma.ui.billing.BillingScreen
 import com.baseras.fieldpharma.ui.home.HomeRouter
@@ -40,7 +44,6 @@ object Routes {
     const val LOGIN = "login"
     const val LOCKED = "locked"
     const val HOME = "home"
-    const val ATTENDANCE = "attendance"
     const val CLIENTS = "clients"
     const val CLIENT_NEW = "clients/new"
     const val TOUR_PLANS = "tour-plans"
@@ -58,6 +61,10 @@ object Routes {
     const val BILLING = "billing"
     const val MORE = "more"
     const val REPORTS = "reports"
+    const val INVITE = "invite"
+    const val SETTINGS = "settings"
+    const val PROFILE = "profile"
+    const val HELP = "help"
 
     fun visits(clientId: String? = null) =
         if (clientId == null) "visits?clientId=" else "visits?clientId=$clientId"
@@ -140,7 +147,6 @@ fun AppNav() {
         }
         composable(Routes.HOME) {
             HomeRouter(
-                onAttendance = { nav.navigate(Routes.ATTENDANCE) },
                 onClients = { nav.navigate(Routes.CLIENTS) },
                 onTourPlans = { nav.navigate(Routes.TOUR_PLANS) },
                 onVisits = { nav.navigate(Routes.visits()) },
@@ -152,6 +158,7 @@ fun AppNav() {
                 onTeam = { nav.navigate(Routes.TEAM) },
                 onBilling = { nav.navigate(Routes.BILLING) },
                 onReports = { nav.navigate(Routes.REPORTS) },
+                onInvite = { nav.navigate(Routes.INVITE) },
                 onMore = { nav.navigate(Routes.MORE) },
                 onLogout = {
                     app.authRepo.logout()
@@ -181,8 +188,8 @@ fun AppNav() {
             MoreScreen(
                 variant = variant,
                 onBack = { nav.popBackStack() },
-                onProfile = { /* TODO */ },
-                onSettings = { /* TODO */ },
+                onProfile = { nav.navigate(Routes.PROFILE) },
+                onSettings = { nav.navigate(Routes.SETTINGS) },
                 onHierarchy = { nav.navigate(Routes.TEAM) },
                 onBilling = { nav.navigate(Routes.BILLING) },
                 onClients = { nav.navigate(Routes.CLIENTS) },
@@ -191,15 +198,37 @@ fun AppNav() {
                 onEdetail = { nav.navigate(Routes.EDETAIL) },
                 onRcpa = { nav.navigate(Routes.RCPA) },
                 onReports = { nav.navigate(Routes.REPORTS) },
-                onHelp = { /* TODO */ },
+                onInvite = { nav.navigate(Routes.INVITE) },
+                onHelp = { nav.navigate(Routes.HELP) },
                 onLogout = {
                     app.authRepo.logout()
                     nav.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
             )
         }
-        composable(Routes.ATTENDANCE) {
-            AttendanceScreen(onBack = { nav.popBackStack() })
+        composable(Routes.INVITE) {
+            InviteUserScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.SETTINGS) {
+            val role = app.authRepo.current?.role ?: "FIELD_PERSON"
+            val variant = when (role) {
+                "ADMIN" -> SettingsVariant.Admin
+                "SENIOR_MANAGER", "REGIONAL_MANAGER" -> SettingsVariant.Manager
+                else -> SettingsVariant.FieldPerson
+            }
+            SettingsScreen(variant = variant, onBack = { nav.popBackStack() })
+        }
+        composable(Routes.PROFILE) {
+            ProfileScreen(
+                onBack = { nav.popBackStack() },
+                onLogout = {
+                    app.authRepo.logout()
+                    nav.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+                },
+            )
+        }
+        composable(Routes.HELP) {
+            HelpScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.CLIENTS) {
             ClientsScreen(

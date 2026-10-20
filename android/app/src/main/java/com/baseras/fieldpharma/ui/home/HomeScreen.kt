@@ -107,7 +107,6 @@ class FieldHomeViewModel(
 
 @Composable
 fun HomeScreen(
-    onAttendance: () -> Unit,
     onClients: () -> Unit,
     onTourPlans: () -> Unit,
     onVisits: () -> Unit,

@@ -44,8 +44,9 @@ fun NewClientScreen(onBack: () -> Unit, onCreated: () -> Unit) {
             )
         },
     ) { padding ->
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().padding(padding)) {
         Column(
-            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
+            modifier = Modifier.padding(16.dp).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
@@ -116,6 +117,8 @@ fun NewClientScreen(onBack: () -> Unit, onCreated: () -> Unit) {
             ) {
                 Text(if (saving) "Saving…" else "Save")
             }
+        }
+        com.baseras.fieldpharma.ui.components.LoadingOverlay(visible = saving, label = "Saving client…")
         }
     }
 }

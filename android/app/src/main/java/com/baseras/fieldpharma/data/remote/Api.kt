@@ -102,6 +102,13 @@ interface Api {
     @GET("/api/dashboard/role-summary")
     suspend fun roleSummary(): RoleSummaryRes
 
+    // ───────── Users — admin / manager side ─────────
+    @GET("/api/users")
+    suspend fun listUsers(): UserListRes
+
+    @POST("/api/users")
+    suspend fun createUser(@Body req: CreateUserReq): CreateUserRes
+
     // ───────── Billing — admin-side ─────────
     @GET("/api/billing/invoices")
     suspend fun billingInvoices(): BillingInvoicesRes
@@ -109,6 +116,32 @@ interface Api {
     @POST("/api/billing/upgrade")
     suspend fun billingUpgrade(@Body req: BillingUpgradeReq): BillingUpgradeRes
 }
+
+@Serializable data class UserListRes(val users: List<UserRow>)
+@Serializable
+data class UserRow(
+    val id: String, val name: String, val email: String,
+    val phone: String? = null,
+    val role: String, val grade: String? = null,
+    val employeeCode: String? = null,
+    val isActive: Boolean = true,
+    val managerId: String? = null,
+    val manager: ManagerRef? = null,
+)
+@Serializable data class ManagerRef(val id: String, val name: String)
+
+@Serializable
+data class CreateUserReq(
+    val name: String,
+    val email: String,
+    val password: String,
+    val phone: String? = null,
+    val role: String, // ADMIN | SENIOR_MANAGER | REGIONAL_MANAGER | FIELD_PERSON
+    val grade: String? = null,
+    val employeeCode: String? = null,
+    val managerId: String? = null,
+)
+@Serializable data class CreateUserRes(val user: UserRow)
 
 @Serializable data class BillingInvoicesRes(val invoices: List<InvoiceDto>)
 @Serializable
