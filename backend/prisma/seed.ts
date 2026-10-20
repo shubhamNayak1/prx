@@ -11,14 +11,19 @@ async function main() {
   });
 
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
+  const PIN = '1234';
+  const PIN_HASH = hash(PIN);
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@baseras.test' },
-    update: {},
+    update: { phone: '9000000001', pinHash: PIN_HASH, pinSetAt: new Date() },
     create: {
       companyId: company.id,
       email: 'admin@baseras.test',
+      phone: '9000000001',
       passwordHash: hash('admin123'),
+      pinHash: PIN_HASH,
+      pinSetAt: new Date(),
       name: 'Baseras Admin',
       role: Role.ADMIN,
       employeeCode: 'ADM001',
@@ -27,11 +32,14 @@ async function main() {
 
   const rsm = await prisma.user.upsert({
     where: { email: 'rsm.north@baseras.test' },
-    update: {},
+    update: { phone: '9000000002', pinHash: PIN_HASH, pinSetAt: new Date() },
     create: {
       companyId: company.id,
       email: 'rsm.north@baseras.test',
+      phone: '9000000002',
       passwordHash: hash('manager123'),
+      pinHash: PIN_HASH,
+      pinSetAt: new Date(),
       name: 'Rajesh Kumar',
       role: Role.SENIOR_MANAGER,
       grade: 'RSM',
@@ -42,11 +50,14 @@ async function main() {
 
   const asm = await prisma.user.upsert({
     where: { email: 'asm.delhi@baseras.test' },
-    update: {},
+    update: { phone: '9000000003', pinHash: PIN_HASH, pinSetAt: new Date() },
     create: {
       companyId: company.id,
       email: 'asm.delhi@baseras.test',
+      phone: '9000000003',
       passwordHash: hash('manager123'),
+      pinHash: PIN_HASH,
+      pinSetAt: new Date(),
       name: 'Suresh Sharma',
       role: Role.REGIONAL_MANAGER,
       grade: 'ASM',
@@ -56,19 +67,22 @@ async function main() {
   });
 
   const mrSeeds = [
-    { email: 'mr.amit@baseras.test', name: 'Amit Singh', code: 'MR001' },
-    { email: 'mr.priya@baseras.test', name: 'Priya Patel', code: 'MR002' },
-    { email: 'mr.ravi@baseras.test', name: 'Ravi Verma', code: 'MR003' },
-    { email: 'mr.neha@baseras.test', name: 'Neha Gupta', code: 'MR004' },
+    { email: 'mr.amit@baseras.test',  phone: '9000000011', name: 'Amit Singh',  code: 'MR001' },
+    { email: 'mr.priya@baseras.test', phone: '9000000012', name: 'Priya Patel', code: 'MR002' },
+    { email: 'mr.ravi@baseras.test',  phone: '9000000013', name: 'Ravi Verma',  code: 'MR003' },
+    { email: 'mr.neha@baseras.test',  phone: '9000000014', name: 'Neha Gupta',  code: 'MR004' },
   ];
   const mrs = await Promise.all(mrSeeds.map((m) =>
     prisma.user.upsert({
       where: { email: m.email },
-      update: {},
+      update: { phone: m.phone, pinHash: PIN_HASH, pinSetAt: new Date() },
       create: {
         companyId: company.id,
         email: m.email,
+        phone: m.phone,
         passwordHash: hash('mr123'),
+        pinHash: PIN_HASH,
+        pinSetAt: new Date(),
         name: m.name,
         role: Role.FIELD_PERSON,
         grade: 'MR1',
@@ -150,10 +164,13 @@ async function main() {
   }
 
   console.log('Seeded:');
-  console.log('  Admin    →  admin@baseras.test  / admin123');
-  console.log('  RSM      →  rsm.north@baseras.test  / manager123');
-  console.log('  ASM      →  asm.delhi@baseras.test  / manager123');
-  console.log('  4× MR    →  mr.{amit,priya,ravi,neha}@baseras.test  / mr123');
+  console.log('  Admin    →  phone 9000000001 · pin 1234  (email admin@baseras.test)');
+  console.log('  Senior   →  phone 9000000002 · pin 1234  (Rajesh Kumar)');
+  console.log('  Regional →  phone 9000000003 · pin 1234  (Suresh Sharma)');
+  console.log('  Field 1  →  phone 9000000011 · pin 1234  (Amit)');
+  console.log('  Field 2  →  phone 9000000012 · pin 1234  (Priya)');
+  console.log('  Field 3  →  phone 9000000013 · pin 1234  (Ravi)');
+  console.log('  Field 4  →  phone 9000000014 · pin 1234  (Neha)');
   console.log('  + clients, sample products, demo e-detail deck');
 }
 

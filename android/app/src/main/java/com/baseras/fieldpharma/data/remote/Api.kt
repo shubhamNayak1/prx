@@ -15,6 +15,21 @@ interface Api {
     @POST("/api/auth/login")
     suspend fun login(@Body req: LoginReq): LoginRes
 
+    @POST("/api/auth/pin-login")
+    suspend fun pinLogin(@Body req: PinLoginReq): LoginRes
+
+    @POST("/api/auth/request-otp")
+    suspend fun requestAuthOtp(@Body req: AuthOtpReq): AuthOtpRes
+
+    @POST("/api/auth/verify-otp")
+    suspend fun verifyAuthOtp(@Body req: AuthOtpVerifyReq): AuthOtpVerifyRes
+
+    @POST("/api/auth/set-pin")
+    suspend fun setPin(@Body req: SetPinReq): LoginRes
+
+    @POST("/api/auth/signup-complete")
+    suspend fun signupComplete(@Body req: SignupCompleteReq): LoginRes
+
     @GET("/api/auth/me")
     suspend fun me(): MeRes
 
@@ -233,6 +248,35 @@ data class SubscriptionDto(
 @Serializable data class LoginReq(val email: String, val password: String)
 @Serializable data class LoginRes(val token: String, val user: UserDto)
 @Serializable data class MeRes(val user: UserDto)
+
+@Serializable data class PinLoginReq(val phone: String, val pin: String)
+@Serializable data class AuthOtpReq(val phone: String, val purpose: String = "LOGIN")
+@Serializable
+data class AuthOtpRes(
+    val challengeId: String,
+    val expiresAt: String,
+    val channel: String,                 // "whatsapp" | "sms" | "dev"
+    val devCode: String? = null,
+)
+@Serializable data class AuthOtpVerifyReq(val phone: String, val otp: String, val purpose: String = "LOGIN")
+@Serializable
+data class AuthOtpVerifyRes(
+    val exists: Boolean,
+    val hasPin: Boolean,
+    val setupToken: String,
+    val user: AuthOtpVerifyUser? = null,
+)
+@Serializable data class AuthOtpVerifyUser(val id: String, val name: String, val role: String)
+@Serializable data class SetPinReq(val setupToken: String, val pin: String, val confirmPin: String)
+@Serializable
+data class SignupCompleteReq(
+    val setupToken: String,
+    val companyName: String,
+    val gstin: String? = null,
+    val adminName: String,
+    val adminEmail: String,
+    val pin: String,
+)
 
 @Serializable
 data class UserDto(

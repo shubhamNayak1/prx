@@ -32,6 +32,8 @@ model Company {
 
 enum OtpPurpose {
   SIGNUP
+  LOGIN
+  RESET_PIN
 }
 
 model OtpChallenge {
@@ -125,8 +127,12 @@ model User {
   companyId    String
   company      Company  @relation(fields: [companyId], references: [id])
   email        String   @unique
-  phone        String?
+  // E.164-ish phone (digits only, no +) — primary login identifier.
+  phone        String?  @unique
   passwordHash String
+  // 4-digit PIN, bcrypted. Primary auth after first OTP verification.
+  pinHash      String?
+  pinSetAt     DateTime?
   name         String
   role         Role
   employeeCode String?  @unique
