@@ -77,14 +77,13 @@ fun LoginScreen(onSignedIn: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                "Baseras FieldPharma",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.baseras.fieldpharma.R.drawable.app_logo),
+                contentDescription = "Baserastech Field Pharma",
+                modifier = Modifier.size(140.dp),
             )
-            Spacer(Modifier.height(4.dp))
-            Text("Sign in", style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(8.dp))
+            Text("Sign in to continue", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(32.dp))
 
             OutlinedTextField(
