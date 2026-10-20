@@ -17,12 +17,93 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.baseras.fieldpharma.FieldPharmaApp
 import com.baseras.fieldpharma.billing.BillingSnapshot
 import com.baseras.fieldpharma.billing.BillingStatus
+import com.baseras.fieldpharma.data.local.AttendanceEntity
+import com.baseras.fieldpharma.data.remote.TourPlanDto
+import com.baseras.fieldpharma.data.repo.AttendanceRepository
 import com.baseras.fieldpharma.ui.components.*
 import com.baseras.fieldpharma.ui.theme.FieldPharmaTheme
 import com.baseras.fieldpharma.ui.theme.LocalSpacing
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+/* ─────────────── Field Home VM ─────────────── */
+
+class FieldHomeViewModel(
+    private val app: FieldPharmaApp,
+) : ViewModel() {
+    val today = app.attendanceRepo.observeToday()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val pendingSync = app.attendanceRepo.observePendingCount()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    private val _plan = MutableStateFlow<List<TourPlanDto>>(emptyList())
+    val plan = _plan.asStateFlow()
+
+    private val _busy = MutableStateFlow(false)
+    val busy = _busy.asStateFlow()
+    private val _msg = MutableStateFlow<String?>(null)
+    val msg = _msg.asStateFlow()
+    private val _loadingPlan = MutableStateFlow(false)
+    val loadingPlan = _loadingPlan.asStateFlow()
+
+    init {
+        refreshPlan()
+    }
+
+    fun refreshPlan() {
+        _loadingPlan.value = true
+        val todayDate = LocalDate.now().toString()
+        viewModelScope.launch {
+            runCatching { app.api.tourPlans(from = todayDate, to = todayDate) }
+                .onSuccess { _plan.value = it.plans }
+            _loadingPlan.value = false
+        }
+    }
+
+    fun punchIn() {
+        if (_busy.value) return
+        _busy.value = true
+        viewModelScope.launch {
+            runCatching {
+                val geo = app.locationProvider.current()
+                app.attendanceRepo.punchIn(geo?.lat, geo?.lng, null)
+                _msg.value = "Punched in"
+            }.onFailure { _msg.value = "Punch in failed: ${it.message}" }
+            _busy.value = false
+        }
+    }
+
+    fun punchOut() {
+        if (_busy.value) return
+        _busy.value = true
+        viewModelScope.launch {
+            runCatching {
+                val geo = app.locationProvider.current()
+                app.attendanceRepo.punchOut(geo?.lat, geo?.lng)
+                _msg.value = "Punched out"
+            }.onFailure { _msg.value = "Punch out failed: ${it.message}" }
+            _busy.value = false
+        }
+    }
+
+    fun clearMessage() { _msg.value = null }
+}
+
+/* ─────────────── Public composable ─────────────── */
 
 @Composable
 fun HomeScreen(
@@ -34,47 +115,91 @@ fun HomeScreen(
     onSamples: () -> Unit,
     onEdetail: () -> Unit,
     onRcpa: () -> Unit,
+    onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val app = FieldPharmaApp.instance
-    val user = app.authRepo.current
-    val pendingCount by app.attendanceRepo.observePendingCount().collectAsState(initial = 0)
+    val vm: FieldHomeViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
+        addInitializer(FieldHomeViewModel::class) { FieldHomeViewModel(app) }
+    })
+    val today by vm.today.collectAsState()
+    val pendingCount by vm.pendingSync.collectAsState()
+    val plan by vm.plan.collectAsState()
+    val loadingPlan by vm.loadingPlan.collectAsState()
+    val busy by vm.busy.collectAsState()
+    val msg by vm.msg.collectAsState()
     val billing by app.billingStore.state.collectAsState()
-    var selectedTab by remember { mutableStateOf(BottomTab.Home) }
+    val user = app.authRepo.current
 
-    // TODO: wire real data (attendance.todayStatus + tourPlan.today + visits.todayCounts).
-    // For first paint while repositories are being wired up, we show a sensible
-    // placeholder so the shape of the screen is correct from day one.
-    val homeState = remember(user) {
-        HomeState(
-            firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
-            greeting = pickGreeting(),
-            attendance = AttendanceState.NotPunched,
-            callsDone = 0,
-            callsPlanned = 0,
-            nextStop = null,
-            upcomingStops = emptyList(),
-            pendingSyncCount = 0,
-            pendingSamples = 0,
-            pendingExpenses = 0,
-        )
+    var showPunchDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(BottomTab.Home) }
+    val snackbarHost = remember { SnackbarHostState() }
+
+    LaunchedEffect(msg) {
+        msg?.let {
+            snackbarHost.showSnackbar(it)
+            vm.clearMessage()
+        }
     }
 
+    val attendance = attendanceState(today)
+    val punchedIn = attendance is AttendanceState.PunchedIn
+
+    val stops = buildStops(plan, punchedIn)
+    val callsDone = stops.count { it.state == PlanStopState.Done }
+    val callsPlanned = stops.size
+    val nextStop = stops.firstOrNull { it.state == PlanStopState.Next }
+        ?.let { NextStop(name = it.name, distanceKm = null, etaLabel = null) }
+
+    val state = HomeState(
+        firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
+        greeting = pickGreeting(),
+        attendance = attendance,
+        callsDone = callsDone,
+        callsPlanned = callsPlanned,
+        nextStop = nextStop,
+        upcomingStops = stops,
+        pendingSyncCount = pendingCount,
+        pendingSamples = 0,
+        pendingExpenses = 0,
+    )
+
     HomeScaffold(
-        state = homeState.copy(pendingSyncCount = pendingCount),
+        state = state,
         billing = billing,
+        loadingPlan = loadingPlan,
         selectedTab = selectedTab,
+        snackbarHost = snackbarHost,
         onSelectTab = { selectedTab = it },
-        onAttendance = onAttendance,
+        onPrimaryHero = {
+            if (!punchedIn) showPunchDialog = true else onVisits()
+        },
+        onAttendanceClick = { showPunchDialog = true },
         onClients = onClients,
         onTourPlans = onTourPlans,
-        onVisits = onVisits,
+        onVisits = {
+            if (!punchedIn) {
+                vm.viewModelScope.launch { snackbarHost.showSnackbar("Punch in first to start a visit.") }
+                showPunchDialog = true
+            } else onVisits()
+        },
         onExpenses = onExpenses,
         onSamples = onSamples,
         onEdetail = onEdetail,
         onRcpa = onRcpa,
+        onMore = onMore,
         onLogout = onLogout,
     )
+
+    if (showPunchDialog) {
+        PunchDialog(
+            attendance = today,
+            busy = busy,
+            onPunchIn = { vm.punchIn() },
+            onPunchOut = { vm.punchOut() },
+            onDismiss = { showPunchDialog = false },
+        )
+    }
 }
 
 /* ─────────────── State type ─────────────── */
@@ -92,16 +217,19 @@ data class HomeState(
     val pendingExpenses: Int,
 )
 
-/* ─────────────── The pure, preview-friendly screen ─────────────── */
+/* ─────────────── The scaffold ─────────────── */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeScaffold(
     state: HomeState,
     billing: BillingSnapshot,
+    loadingPlan: Boolean,
     selectedTab: BottomTab,
+    snackbarHost: SnackbarHostState,
     onSelectTab: (BottomTab) -> Unit,
-    onAttendance: () -> Unit,
+    onPrimaryHero: () -> Unit,
+    onAttendanceClick: () -> Unit,
     onClients: () -> Unit,
     onTourPlans: () -> Unit,
     onVisits: () -> Unit,
@@ -109,15 +237,15 @@ private fun HomeScaffold(
     onSamples: () -> Unit,
     onEdetail: () -> Unit,
     onRcpa: () -> Unit,
+    onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val sp = LocalSpacing.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopHeader(firstName = state.firstName, onLogout = onLogout)
-        },
+        topBar = { TopHeader(firstName = state.firstName, onLogout = onLogout) },
+        snackbarHost = { SnackbarHost(snackbarHost) },
         bottomBar = {
             BottomNavBar(
                 selected = selectedTab,
@@ -126,7 +254,8 @@ private fun HomeScaffold(
                     when (tab) {
                         BottomTab.Plan -> onTourPlans()
                         BottomTab.Visits -> onVisits()
-                        BottomTab.More, BottomTab.Home -> Unit
+                        BottomTab.More -> onMore()
+                        BottomTab.Home -> Unit
                     }
                 },
             )
@@ -137,14 +266,10 @@ private fun HomeScaffold(
             contentPadding = PaddingValues(horizontal = sp.lg, vertical = sp.sm),
             verticalArrangement = Arrangement.spacedBy(sp.lg),
         ) {
-            // ─── trial countdown (only during TRIAL) ───
             billing.trialDaysLeft?.let { days ->
-                item {
-                    TrialBanner(days = days)
-                }
+                item { TrialBanner(days = days) }
             }
 
-            // ─── hero ───
             item {
                 HeroStatusCard(
                     greeting = state.greeting,
@@ -152,19 +277,14 @@ private fun HomeScaffold(
                     callsDone = state.callsDone,
                     callsPlanned = state.callsPlanned,
                     nextStop = state.nextStop,
-                    onPrimaryAction = {
-                        when (state.attendance) {
-                            is AttendanceState.PunchedIn -> onVisits()
-                            else -> onAttendance()
-                        }
-                    },
+                    onPrimaryAction = onPrimaryHero,
                 )
             }
 
-            // ─── quick actions ───
             item {
                 QuickActionsRow(
                     actions = listOf(
+                        QuickAction("Attendance", Icons.Default.AccessTime, onAttendanceClick),
                         QuickAction("Add client", Icons.Default.PersonAdd, onClients),
                         QuickAction("Samples", Icons.Default.CardGiftcard, onSamples),
                         QuickAction("Expense", Icons.Default.Receipt, onExpenses),
@@ -174,16 +294,21 @@ private fun HomeScaffold(
                 )
             }
 
-            // ─── today's plan ───
             item {
                 SectionHeader(
                     title = "Today's plan",
                     actionLabel = if (state.upcomingStops.isNotEmpty()) "See all" else null,
-                    onAction = { onTourPlans() },
+                    onAction = onTourPlans,
                 )
             }
 
-            if (state.upcomingStops.isEmpty()) {
+            if (loadingPlan && state.upcomingStops.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                        InlineSpinner(size = 22.dp)
+                    }
+                }
+            } else if (state.upcomingStops.isEmpty()) {
                 item { EmptyPlanCard(onPlan = onTourPlans) }
             } else {
                 items(state.upcomingStops, key = { it.time + it.name }) { stop ->
@@ -191,16 +316,9 @@ private fun HomeScaffold(
                 }
             }
 
-            // ─── pending ───
-            if (state.pendingSyncCount + state.pendingSamples + state.pendingExpenses > 0) {
+            if (state.pendingSyncCount > 0) {
                 item { SectionHeader("Pending") }
-                item {
-                    PendingList(
-                        syncCount = state.pendingSyncCount,
-                        samples = state.pendingSamples,
-                        expenses = state.pendingExpenses,
-                    )
-                }
+                item { PendingSyncCard(count = state.pendingSyncCount) }
             }
 
             item { Spacer(Modifier.height(sp.lg)) }
@@ -215,6 +333,7 @@ private fun TopHeader(firstName: String, onLogout: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -269,13 +388,9 @@ private fun TrialBanner(days: Int) {
         color = if (urgent) MaterialTheme.colorScheme.errorContainer
                 else MaterialTheme.colorScheme.primaryContainer,
     ) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Default.Timelapse,
-                null,
+                Icons.Default.Timelapse, null,
                 tint = if (urgent) MaterialTheme.colorScheme.onErrorContainer
                        else MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(18.dp),
@@ -312,19 +427,14 @@ private fun EmptyPlanCard(onPlan: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
-                Icons.Default.EventAvailable,
-                null,
+                Icons.Default.EventAvailable, null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(28.dp),
             )
             Spacer(Modifier.height(8.dp))
+            Text("No upcoming plan", style = MaterialTheme.typography.titleMedium)
             Text(
-                "No stops planned for today",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                "Add clients to your tour plan to see them here.",
+                "Nothing scheduled today — add stops in Tour Plan.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -337,48 +447,73 @@ private fun EmptyPlanCard(onPlan: () -> Unit) {
 }
 
 @Composable
-private fun PendingList(syncCount: Int, samples: Int, expenses: Int) {
+private fun PendingSyncCard(count: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
     ) {
-        Column(Modifier.padding(vertical = 4.dp)) {
-            if (syncCount > 0) PendingRow(
-                Icons.Default.CloudUpload, "$syncCount item${if (syncCount == 1) "" else "s"} to sync",
-                "Will send automatically when online"
-            )
-            if (samples > 0) PendingRow(
-                Icons.Default.CardGiftcard, "$samples sample distribution${if (samples == 1) "" else "s"} pending",
-                "Linked to today's visits"
-            )
-            if (expenses > 0) PendingRow(
-                Icons.Default.Receipt, "$expenses expense draft${if (expenses == 1) "" else "s"}",
-                "Submit for manager approval"
-            )
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.CloudUpload, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("$count item${if (count == 1) "" else "s"} to sync", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Will send automatically when online",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
 
-@Composable
-private fun PendingRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+/* ─────────────── Helpers ─────────────── */
+
+/** Derives UI AttendanceState from the local Room row. */
+internal fun attendanceState(a: AttendanceEntity?): AttendanceState {
+    if (a?.punchInAt == null) return AttendanceState.NotPunched
+    val fmt = DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+    val inTime = runCatching { fmt.format(Instant.parse(a.punchInAt)) }.getOrNull() ?: "—"
+    val outIso = a.punchOutAt
+    return if (outIso != null) {
+        val outTime = runCatching { fmt.format(Instant.parse(outIso)) }.getOrNull() ?: "—"
+        AttendanceState.PunchedOut(outTime)
+    } else {
+        AttendanceState.PunchedIn(inTime)
+    }
+}
+
+/**
+ * Flatten today's tour plans into the UI PlanStop model. Marks stops as Done
+ * if the plan status is COMPLETED, Next for the first upcoming entry, else Upcoming.
+ */
+internal fun buildStops(plans: List<TourPlanDto>, punchedIn: Boolean): List<PlanStop> {
+    val raw = plans.flatMap { p ->
+        p.entries.map { e ->
+            PlanStop(
+                time = p.date.takeLast(5).ifBlank { "—" },
+                name = e.client?.name ?: e.area ?: "Stop",
+                subtitle = (e.client?.speciality ?: e.area ?: "") + (e.client?.city?.let { " · $it" } ?: ""),
+                state = PlanStopState.Upcoming,
+                isChemist = e.client?.type == "CHEMIST",
+            )
         }
+    }
+    if (raw.isEmpty()) return emptyList()
+    // First upcoming becomes "Next" if the user is punched in; otherwise all stay Upcoming
+    return if (!punchedIn) raw else raw.mapIndexed { i, s ->
+        if (i == 0) s.copy(state = PlanStopState.Next) else s
     }
 }
 
 /* ─────────────── Previews ─────────────── */
 
-@Preview(name = "Home — mid-day, 4/12 done", showBackground = true, backgroundColor = 0xFFF8FAFC, heightDp = 900)
+@Preview(name = "Home — mid-day, 4/12 done", showBackground = true, backgroundColor = 0xFFF8FAFC, heightDp = 1000)
 @Composable
 private fun HomePreviewMidDay() {
     FieldPharmaTheme {
@@ -391,27 +526,27 @@ private fun HomePreviewMidDay() {
                 callsPlanned = 12,
                 nextStop = NextStop("Dr. R. Sharma", distanceKm = 2.3, etaLabel = "8 min"),
                 upcomingStops = listOf(
-                    PlanStop("09:30", "Dr. R. Mehta",    "Cardiology · Dadar",      PlanStopState.Done),
-                    PlanStop("10:30", "Apollo Pharmacy", "Chemist · Lower Parel",   PlanStopState.Done, isChemist = true),
-                    PlanStop("11:30", "Dr. R. Sharma",   "Diabetology · Mahim · 2.3 km", PlanStopState.Next),
-                    PlanStop("13:00", "Dr. S. Patel",    "Pediatrics · Bandra · 4.1 km", PlanStopState.Upcoming),
-                    PlanStop("14:30", "Metro Chemist",   "Chemist · Khar · 5.0 km", PlanStopState.Upcoming, isChemist = true),
+                    PlanStop("09:30", "Dr. R. Mehta", "Cardiology · Dadar", PlanStopState.Done),
+                    PlanStop("11:30", "Dr. R. Sharma", "Diabetology · Mahim", PlanStopState.Next),
+                    PlanStop("13:00", "Dr. S. Patel", "Pediatrics · Bandra", PlanStopState.Upcoming),
                 ),
                 pendingSyncCount = 2,
                 pendingSamples = 3,
                 pendingExpenses = 1,
             ),
-            billing = BillingSnapshot(BillingStatus.TRIAL, cycle = null, trialEndsAt = null, fetchedAt = 0L),
+            billing = BillingSnapshot(BillingStatus.TRIAL, null, null, 0L),
+            loadingPlan = false,
             selectedTab = BottomTab.Home,
-            onSelectTab = {},
-            onAttendance = {}, onClients = {}, onTourPlans = {}, onVisits = {},
+            snackbarHost = SnackbarHostState(),
+            onSelectTab = {}, onPrimaryHero = {}, onAttendanceClick = {},
+            onClients = {}, onTourPlans = {}, onVisits = {},
             onExpenses = {}, onSamples = {}, onEdetail = {}, onRcpa = {},
-            onLogout = {},
+            onMore = {}, onLogout = {},
         )
     }
 }
 
-@Preview(name = "Home — not punched in", showBackground = true, backgroundColor = 0xFFF8FAFC, heightDp = 900)
+@Preview(name = "Home — not punched in", showBackground = true, backgroundColor = 0xFFF8FAFC, heightDp = 1000)
 @Composable
 private fun HomePreviewFresh() {
     FieldPharmaTheme {
@@ -420,50 +555,18 @@ private fun HomePreviewFresh() {
                 firstName = "Amit",
                 greeting = "Good morning",
                 attendance = AttendanceState.NotPunched,
-                callsDone = 0,
-                callsPlanned = 0,
-                nextStop = null,
-                upcomingStops = emptyList(),
-                pendingSyncCount = 0,
-                pendingSamples = 0,
-                pendingExpenses = 0,
+                callsDone = 0, callsPlanned = 0,
+                nextStop = null, upcomingStops = emptyList(),
+                pendingSyncCount = 0, pendingSamples = 0, pendingExpenses = 0,
             ),
-            billing = BillingSnapshot(BillingStatus.ACTIVE, cycle = null, trialEndsAt = null, fetchedAt = 0L),
+            billing = BillingSnapshot(BillingStatus.ACTIVE, null, null, 0L),
+            loadingPlan = false,
             selectedTab = BottomTab.Home,
-            onSelectTab = {},
-            onAttendance = {}, onClients = {}, onTourPlans = {}, onVisits = {},
+            snackbarHost = SnackbarHostState(),
+            onSelectTab = {}, onPrimaryHero = {}, onAttendanceClick = {},
+            onClients = {}, onTourPlans = {}, onVisits = {},
             onExpenses = {}, onSamples = {}, onEdetail = {}, onRcpa = {},
-            onLogout = {},
-        )
-    }
-}
-
-@Preview(name = "Home — day complete", showBackground = true, backgroundColor = 0xFFF8FAFC, heightDp = 900)
-@Composable
-private fun HomePreviewComplete() {
-    FieldPharmaTheme {
-        HomeScaffold(
-            state = HomeState(
-                firstName = "Amit",
-                greeting = "Good evening",
-                attendance = AttendanceState.PunchedIn("09:12"),
-                callsDone = 12,
-                callsPlanned = 12,
-                nextStop = null,
-                upcomingStops = listOf(
-                    PlanStop("09:30", "Dr. R. Mehta", "Cardiology · Dadar", PlanStopState.Done),
-                    PlanStop("13:00", "Dr. S. Patel", "Pediatrics · Bandra", PlanStopState.Done),
-                ),
-                pendingSyncCount = 0,
-                pendingSamples = 0,
-                pendingExpenses = 0,
-            ),
-            billing = BillingSnapshot(BillingStatus.ACTIVE, cycle = null, trialEndsAt = null, fetchedAt = 0L),
-            selectedTab = BottomTab.Home,
-            onSelectTab = {},
-            onAttendance = {}, onClients = {}, onTourPlans = {}, onVisits = {},
-            onExpenses = {}, onSamples = {}, onEdetail = {}, onRcpa = {},
-            onLogout = {},
+            onMore = {}, onLogout = {},
         )
     }
 }

@@ -205,7 +205,7 @@ private fun RmHomeScaffold(
 @Composable
 internal fun ManagerTopHeader(firstName: String, roleBadge: String, onLogout: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

@@ -282,28 +282,53 @@ private fun PlanCard(
     val effective = PRICE_PER_REP_PAISE * (100 - cycle.discountPct) / 100
     val borderMod = if (selected) {
         Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium)
-    } else Modifier
+    } else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+
     Surface(
-        modifier = modifier.then(borderMod),
+        modifier = modifier.height(170.dp).then(borderMod),
         shape = MaterialTheme.shapes.medium,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
                 else MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        tonalElevation = 0.dp,
         onClick = onClick,
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(cycle.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                if (cycle.discountPct > 0) StatusPill("SAVE ${cycle.discountPct}%", PillTone.Success)
+        Column(
+            modifier = Modifier.fillMaxSize().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // 1. Header
+            Text(
+                cycle.label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            // 2. Discount chip (fixed slot so cards line up even when 0%)
+            Box(modifier = Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+                if (cycle.discountPct > 0) {
+                    StatusPill("SAVE ${cycle.discountPct}%", PillTone.Success)
+                }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.weight(1f))
+            // 3. Discounted price (big) + strikethrough list price (small) when discounted
             Text(
                 formatInr(effective),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
+            if (cycle.discountPct > 0) {
+                Text(
+                    formatInr(PRICE_PER_REP_PAISE),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                )
+            } else {
+                Spacer(Modifier.height(16.dp))   // keep same vertical rhythm as discounted cards
+            }
+            // 4. per user / per month
             Text(
-                "/user/mo",
+                "per user / month",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -22,6 +22,9 @@ import com.baseras.fieldpharma.ui.expense.NewExpenseScreen
 import com.baseras.fieldpharma.ui.approvals.ApprovalsScreen
 import com.baseras.fieldpharma.ui.billing.BillingScreen
 import com.baseras.fieldpharma.ui.home.HomeRouter
+import com.baseras.fieldpharma.ui.more.MoreScreen
+import com.baseras.fieldpharma.ui.more.MoreVariant
+import com.baseras.fieldpharma.ui.reports.ReportsScreen
 import com.baseras.fieldpharma.ui.team.TeamScreen
 import com.baseras.fieldpharma.ui.locked.LockedScreen
 import com.baseras.fieldpharma.ui.login.LoginScreen
@@ -53,6 +56,8 @@ object Routes {
     const val APPROVALS = "approvals"
     const val TEAM = "team"
     const val BILLING = "billing"
+    const val MORE = "more"
+    const val REPORTS = "reports"
 
     fun visits(clientId: String? = null) =
         if (clientId == null) "visits?clientId=" else "visits?clientId=$clientId"
@@ -146,6 +151,8 @@ fun AppNav() {
                 onApprovals = { nav.navigate(Routes.APPROVALS) },
                 onTeam = { nav.navigate(Routes.TEAM) },
                 onBilling = { nav.navigate(Routes.BILLING) },
+                onReports = { nav.navigate(Routes.REPORTS) },
+                onMore = { nav.navigate(Routes.MORE) },
                 onLogout = {
                     app.authRepo.logout()
                     nav.navigate(Routes.LOGIN) { popUpTo(Routes.HOME) { inclusive = true } }
@@ -160,6 +167,36 @@ fun AppNav() {
         }
         composable(Routes.BILLING) {
             BillingScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.REPORTS) {
+            ReportsScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.MORE) {
+            val role = app.authRepo.current?.role ?: "FIELD_PERSON"
+            val variant = when (role) {
+                "ADMIN" -> MoreVariant.Admin
+                "SENIOR_MANAGER", "REGIONAL_MANAGER" -> MoreVariant.Manager
+                else -> MoreVariant.FieldPerson
+            }
+            MoreScreen(
+                variant = variant,
+                onBack = { nav.popBackStack() },
+                onProfile = { /* TODO */ },
+                onSettings = { /* TODO */ },
+                onHierarchy = { nav.navigate(Routes.TEAM) },
+                onBilling = { nav.navigate(Routes.BILLING) },
+                onClients = { nav.navigate(Routes.CLIENTS) },
+                onExpenses = { nav.navigate(Routes.EXPENSES) },
+                onSamples = { nav.navigate(Routes.SAMPLES) },
+                onEdetail = { nav.navigate(Routes.EDETAIL) },
+                onRcpa = { nav.navigate(Routes.RCPA) },
+                onReports = { nav.navigate(Routes.REPORTS) },
+                onHelp = { /* TODO */ },
+                onLogout = {
+                    app.authRepo.logout()
+                    nav.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+                },
+            )
         }
         composable(Routes.ATTENDANCE) {
             AttendanceScreen(onBack = { nav.popBackStack() })

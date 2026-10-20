@@ -47,35 +47,44 @@ class VisitViewModel(
         if (busy.value) return
         busy.value = true
         viewModelScope.launch {
-            val geo = location.current()
-            val localId = visitRepo.checkIn(client.id, geo?.lat, geo?.lng)
-            activeVisit.value = visitRepo.byId(localId)
-            activeClient.value = client
+            runCatching {
+                val geo = location.current()
+                val localId = visitRepo.checkIn(client.id, geo?.lat, geo?.lng)
+                activeVisit.value = visitRepo.byId(localId)
+                activeClient.value = client
+                msg.value = "Checked in at ${client.name}"
+            }.onFailure { msg.value = "Check-in failed: ${it.message}" }
             busy.value = false
-            msg.value = "Checked in at ${client.name}"
         }
     }
 
     fun saveNotes(notes: String, products: String) {
         val v = activeVisit.value ?: return
         viewModelScope.launch {
-            val list = products.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            visitRepo.saveNotes(v.localId, notes, list)
-            activeVisit.value = visitRepo.byId(v.localId)
+            runCatching {
+                val list = products.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                visitRepo.saveNotes(v.localId, notes, list)
+                activeVisit.value = visitRepo.byId(v.localId)
+            }.onFailure { msg.value = "Save failed: ${it.message}" }
         }
     }
 
-    fun checkOut() {
+    /** Persists current field edits AND checks out. busy always resets on failure. */
+    fun checkOutWith(notes: String, products: String) {
         val v = activeVisit.value ?: return
         if (busy.value) return
         busy.value = true
         viewModelScope.launch {
-            val geo = location.current()
-            visitRepo.checkOut(v.localId, geo?.lat, geo?.lng)
-            activeVisit.value = null
-            activeClient.value = null
+            runCatching {
+                val list = products.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                visitRepo.saveNotes(v.localId, notes, list)
+                val geo = location.current()
+                visitRepo.checkOut(v.localId, geo?.lat, geo?.lng)
+                activeVisit.value = null
+                activeClient.value = null
+                msg.value = "Visit completed and queued for sync"
+            }.onFailure { msg.value = "Check-out failed: ${it.message}" }
             busy.value = false
-            msg.value = "Visit completed and queued for sync"
         }
     }
 }
@@ -123,14 +132,15 @@ fun VisitFlow(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+        Box(Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             if (visit != null) {
                 ActiveVisitPanel(
                     visit = visit!!,
                     client = client,
                     busy = busy,
                     onSave = vm::saveNotes,
-                    onCheckOut = vm::checkOut,
+                    onCheckOut = vm::checkOutWith,
                 )
             } else {
                 Button(
@@ -164,6 +174,11 @@ fun VisitFlow(
                 }
             }
         }
+            com.baseras.fieldpharma.ui.components.LoadingOverlay(
+                visible = busy,
+                label = if (visit != null) "Checking out…" else "Starting visit…",
+            )
+        }
     }
 }
 
@@ -173,7 +188,7 @@ private fun ActiveVisitPanel(
     client: ClientEntity?,
     busy: Boolean,
     onSave: (notes: String, products: String) -> Unit,
-    onCheckOut: () -> Unit,
+    onCheckOut: (notes: String, products: String) -> Unit,
 ) {
     var notes by remember(visit.localId) { mutableStateOf(visit.notes ?: "") }
     var products by remember(visit.localId) { mutableStateOf(visit.productsJson?.replace("|", ", ") ?: "") }
@@ -199,13 +214,24 @@ private fun ActiveVisitPanel(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = { onSave(notes, products) },
+                    enabled = !busy,
                     modifier = Modifier.weight(1f),
                 ) { Text("Save") }
                 Button(
-                    onClick = onCheckOut,
+                    onClick = { onCheckOut(notes, products) },
                     enabled = !busy,
                     modifier = Modifier.weight(1f),
-                ) { Text("Check out") }
+                ) {
+                    if (busy) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text("Check out")
+                    }
+                }
             }
         }
     }
