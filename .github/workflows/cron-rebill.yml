@@ -1,0 +1,21 @@
+name: Cron — Generate renewal invoices
+
+on:
+  # Scheduled runs are OFF while testing. To enable: uncomment below, add
+  # repo secrets API_URL + CRON_KEY, and the daily run kicks in on next push.
+  # schedule:
+  #   - cron: '45 0 * * *'   # 06:15 IST daily (15 min after trial-lock)
+  workflow_dispatch: {}
+
+jobs:
+  rebill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/billing/cron/rebill
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_KEY: ${{ secrets.CRON_KEY }}
+        run: |
+          curl -fsS -X POST \
+            -H "x-cron-key: ${CRON_KEY}" \
+            "${API_URL}/api/billing/cron/rebill"

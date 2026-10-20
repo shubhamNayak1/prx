@@ -1,0 +1,21 @@
+name: Cron — Lock expired trials
+
+on:
+  # Scheduled runs are OFF while testing. To enable: uncomment below, add
+  # repo secrets API_URL + CRON_KEY, and the daily run kicks in on next push.
+  # schedule:
+  #   - cron: '30 0 * * *'   # 06:00 IST daily
+  workflow_dispatch: {}       # lets you run it manually from the Actions tab
+
+jobs:
+  trial-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/billing/cron/trial-lock
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          CRON_KEY: ${{ secrets.CRON_KEY }}
+        run: |
+          curl -fsS -X POST \
+            -H "x-cron-key: ${CRON_KEY}" \
+            "${API_URL}/api/billing/cron/trial-lock"
