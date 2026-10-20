@@ -19,7 +19,7 @@ import com.baseras.fieldpharma.ui.edetail.DecksScreen
 import com.baseras.fieldpharma.ui.edetail.DeckViewerScreen
 import com.baseras.fieldpharma.ui.expense.ExpensesScreen
 import com.baseras.fieldpharma.ui.expense.NewExpenseScreen
-import com.baseras.fieldpharma.ui.home.HomeScreen
+import com.baseras.fieldpharma.ui.home.HomeRouter
 import com.baseras.fieldpharma.ui.locked.LockedScreen
 import com.baseras.fieldpharma.ui.login.LoginScreen
 import com.baseras.fieldpharma.ui.rcpa.NewRcpaScreen
@@ -128,7 +128,7 @@ fun AppNav() {
             )
         }
         composable(Routes.HOME) {
-            HomeScreen(
+            HomeRouter(
                 onAttendance = { nav.navigate(Routes.ATTENDANCE) },
                 onClients = { nav.navigate(Routes.CLIENTS) },
                 onTourPlans = { nav.navigate(Routes.TOUR_PLANS) },
