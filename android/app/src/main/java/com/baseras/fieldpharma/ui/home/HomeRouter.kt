@@ -18,26 +18,29 @@ fun HomeRouter(
     onSamples: () -> Unit,
     onEdetail: () -> Unit,
     onRcpa: () -> Unit,
+    onApprovals: () -> Unit,
+    onTeam: () -> Unit,
+    onBilling: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val role = FieldPharmaApp.instance.authRepo.current?.role ?: "FIELD_PERSON"
     when (role) {
         "ADMIN" -> AdminHomeScreen(
             onPeople = { /* TODO: users list on mobile */ onClients() },
-            onBilling = { /* TODO: billing screen on mobile */ },
+            onBilling = onBilling,
             onMore = { /* TODO: settings */ },
             onLogout = onLogout,
         )
         "SENIOR_MANAGER" -> SeniorManagerHomeScreen(
-            onApprovals = { onTourPlans() },  // placeholder: Approvals screen not built yet
-            onRegions = { /* TODO: regions list */ },
+            onApprovals = onApprovals,
+            onRegions = onTeam,              // Regions list reuses the team screen
             onReports = { /* TODO: reports */ },
             onMore = { /* TODO */ },
             onLogout = onLogout,
         )
         "REGIONAL_MANAGER" -> RegionalManagerHomeScreen(
-            onApprovals = { onTourPlans() },
-            onTeam = { /* TODO: team list */ },
+            onApprovals = onApprovals,
+            onTeam = onTeam,
             onMore = { /* TODO */ },
             onLogout = onLogout,
         )

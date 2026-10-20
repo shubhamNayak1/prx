@@ -19,7 +19,10 @@ import com.baseras.fieldpharma.ui.edetail.DecksScreen
 import com.baseras.fieldpharma.ui.edetail.DeckViewerScreen
 import com.baseras.fieldpharma.ui.expense.ExpensesScreen
 import com.baseras.fieldpharma.ui.expense.NewExpenseScreen
+import com.baseras.fieldpharma.ui.approvals.ApprovalsScreen
+import com.baseras.fieldpharma.ui.billing.BillingScreen
 import com.baseras.fieldpharma.ui.home.HomeRouter
+import com.baseras.fieldpharma.ui.team.TeamScreen
 import com.baseras.fieldpharma.ui.locked.LockedScreen
 import com.baseras.fieldpharma.ui.login.LoginScreen
 import com.baseras.fieldpharma.ui.rcpa.NewRcpaScreen
@@ -47,6 +50,9 @@ object Routes {
     const val DECK_VIEWER = "edetail/{deckId}"
     const val RCPA = "rcpa"
     const val RCPA_NEW = "rcpa/new"
+    const val APPROVALS = "approvals"
+    const val TEAM = "team"
+    const val BILLING = "billing"
 
     fun visits(clientId: String? = null) =
         if (clientId == null) "visits?clientId=" else "visits?clientId=$clientId"
@@ -137,11 +143,23 @@ fun AppNav() {
                 onSamples = { nav.navigate(Routes.SAMPLES) },
                 onEdetail = { nav.navigate(Routes.EDETAIL) },
                 onRcpa = { nav.navigate(Routes.RCPA) },
+                onApprovals = { nav.navigate(Routes.APPROVALS) },
+                onTeam = { nav.navigate(Routes.TEAM) },
+                onBilling = { nav.navigate(Routes.BILLING) },
                 onLogout = {
                     app.authRepo.logout()
                     nav.navigate(Routes.LOGIN) { popUpTo(Routes.HOME) { inclusive = true } }
                 },
             )
+        }
+        composable(Routes.APPROVALS) {
+            ApprovalsScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.TEAM) {
+            TeamScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.BILLING) {
+            BillingScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.ATTENDANCE) {
             AttendanceScreen(onBack = { nav.popBackStack() })

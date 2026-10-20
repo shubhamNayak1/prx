@@ -62,18 +62,31 @@ fun SeniorManagerHomeScreen(
 ) {
     val app = FieldPharmaApp.instance
     val user = app.authRepo.current
-    val state = remember(user) {
-        SmHomeState(
-            firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
-            totalReps = 0,
-            activeReps = 0,
-            callsMtd = 0,
-            callsPlannedMtd = 0,
-            attainmentPct = 0,
-            pendingEscalations = 0,
-            regions = emptyList(),
-        )
+    var summary by remember { mutableStateOf<com.baseras.fieldpharma.data.remote.RoleSummaryRes?>(null) }
+
+    LaunchedEffect(user?.id) {
+        app.dashboardRepo.roleSummary().onSuccess { summary = it }
     }
+
+    val state = SmHomeState(
+        firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
+        totalReps = summary?.kpis?.totalReps ?: 0,
+        activeReps = summary?.kpis?.activeToday ?: 0,
+        callsMtd = summary?.kpis?.monthVisits ?: 0,
+        callsPlannedMtd = summary?.kpis?.monthPlanned ?: 0,
+        attainmentPct = summary?.kpis?.attainmentPct ?: 0,
+        pendingEscalations = (summary?.kpis?.pendingExpensesCount ?: 0),
+        regions = summary?.team.orEmpty().map { r ->
+            RegionSummary(
+                regionalManagerName = r.name,
+                regionLabel = "${r.grade ?: "—"} · ${r.totalReps} rep${if (r.totalReps == 1) "" else "s"}",
+                activeReps = r.activeToday,
+                totalReps = r.totalReps,
+                attainmentPct = r.attainmentPct,
+                pendingApprovals = 0, // TODO: enrich backend with per-RM pending counts
+            )
+        },
+    )
     SmHomeScaffold(
         state = state,
         onApprovals = onApprovals,

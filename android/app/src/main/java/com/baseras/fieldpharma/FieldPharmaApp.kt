@@ -9,6 +9,7 @@ import com.baseras.fieldpharma.data.repo.AttendanceRepository
 import com.baseras.fieldpharma.data.repo.AuthRepository
 import com.baseras.fieldpharma.data.repo.BillingRepository
 import com.baseras.fieldpharma.data.repo.ClientRepository
+import com.baseras.fieldpharma.data.repo.DashboardRepository
 import com.baseras.fieldpharma.data.repo.EdetailRepository
 import com.baseras.fieldpharma.data.repo.ExpenseRepository
 import com.baseras.fieldpharma.data.repo.RcpaRepository
@@ -34,6 +35,7 @@ class FieldPharmaApp : Application() {
     lateinit var sampleRepo: SampleRepository
     lateinit var edetailRepo: EdetailRepository
     lateinit var rcpaRepo: RcpaRepository
+    lateinit var dashboardRepo: DashboardRepository
     lateinit var locationProvider: LocationProvider
 
     val apiBaseUrl: String get() = BuildConfig.API_URL
@@ -57,6 +59,7 @@ class FieldPharmaApp : Application() {
         sampleRepo = SampleRepository(api, db.pendingSyncDao())
         edetailRepo = EdetailRepository(api, db.deckDao(), db.slideDao(), db.pendingSyncDao())
         rcpaRepo = RcpaRepository(api, db.pendingSyncDao())
+        dashboardRepo = DashboardRepository(api)
         locationProvider = LocationProvider(this)
 
         scheduleSync(this)

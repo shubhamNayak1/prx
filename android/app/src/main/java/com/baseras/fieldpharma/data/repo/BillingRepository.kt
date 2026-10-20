@@ -4,6 +4,9 @@ import com.baseras.fieldpharma.billing.BillingSnapshot
 import com.baseras.fieldpharma.billing.BillingStatus
 import com.baseras.fieldpharma.billing.BillingStore
 import com.baseras.fieldpharma.data.remote.Api
+import com.baseras.fieldpharma.data.remote.BillingUpgradeReq
+import com.baseras.fieldpharma.data.remote.BillingUpgradeRes
+import com.baseras.fieldpharma.data.remote.InvoiceDto
 
 class BillingRepository(
     private val api: Api,
@@ -27,6 +30,11 @@ class BillingRepository(
         store.set(snap)
         snap
     }
+
+    suspend fun invoices(): Result<List<InvoiceDto>> = runCatching { api.billingInvoices().invoices }
+
+    suspend fun upgrade(cycle: String): Result<BillingUpgradeRes> =
+        runCatching { api.billingUpgrade(BillingUpgradeReq(cycle)) }
 
     val snapshot: BillingSnapshot get() = store.state.value
 }

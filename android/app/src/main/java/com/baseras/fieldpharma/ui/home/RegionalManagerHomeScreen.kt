@@ -54,21 +54,36 @@ fun RegionalManagerHomeScreen(
 ) {
     val app = FieldPharmaApp.instance
     val user = app.authRepo.current
-    val state = remember(user) {
-        // Mock state until the reporting endpoints are wired. Shape is final.
-        RmHomeState(
-            firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
-            activeToday = 0,
-            teamSize = 0,
-            callsSoFar = 0,
-            callsPlanned = 0,
-            attainmentPct = 0,
-            pendingTourPlans = 0,
-            pendingExpenses = 0,
-            pendingClients = 0,
-            team = emptyList(),
-        )
+    var summary by remember { mutableStateOf<com.baseras.fieldpharma.data.remote.RoleSummaryRes?>(null) }
+
+    LaunchedEffect(user?.id) {
+        app.dashboardRepo.roleSummary().onSuccess { summary = it }
     }
+
+    val state = RmHomeState(
+        firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
+        activeToday = summary?.kpis?.activeToday ?: 0,
+        teamSize = summary?.kpis?.totalReps ?: 0,
+        callsSoFar = summary?.kpis?.callsToday ?: 0,
+        callsPlanned = summary?.kpis?.callsPlannedToday ?: 0,
+        attainmentPct = summary?.kpis?.attainmentPct ?: 0,
+        pendingTourPlans = summary?.kpis?.pendingTourPlans ?: 0,
+        pendingExpenses = summary?.kpis?.pendingExpensesCount ?: 0,
+        pendingClients = summary?.kpis?.pendingClients ?: 0,
+        team = summary?.team.orEmpty().map { r ->
+            TeamMember(
+                name = r.name,
+                roleLabel = "Field · ${r.grade ?: "—"}",
+                status = when (r.status) {
+                    "ActiveToday" -> TeamMemberStatus.ActiveToday
+                    "NotPunched" -> TeamMemberStatus.NotPunched
+                    "Flagged" -> TeamMemberStatus.Flagged
+                    else -> TeamMemberStatus.OffField
+                },
+                progressLine = "${r.callsToday} / ${r.callsPlanned} calls",
+            )
+        },
+    )
     RmHomeScaffold(
         state = state,
         onApprovals = onApprovals,

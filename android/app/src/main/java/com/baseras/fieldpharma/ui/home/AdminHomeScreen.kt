@@ -54,19 +54,22 @@ fun AdminHomeScreen(
     val app = FieldPharmaApp.instance
     val user = app.authRepo.current
     val billing by app.billingStore.state.collectAsState()
+    var kpis by remember { mutableStateOf<com.baseras.fieldpharma.data.remote.RoleKpis?>(null) }
 
-    val state = remember(user, billing) {
-        AdminHomeState(
-            firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
-            companyName = "Your company",     // TODO: wire from /api/billing/status or /api/me
-            totalUsers = 0,
-            activeToday = 0,
-            monthCalls = 0,
-            monthSpendInr = 0,
-            pendingSignups = 0,
-            billing = billing,
-        )
+    LaunchedEffect(user?.id) {
+        app.dashboardRepo.roleSummary().onSuccess { kpis = it.kpis }
     }
+
+    val state = AdminHomeState(
+        firstName = user?.name?.split(" ")?.firstOrNull() ?: "there",
+        companyName = "Your company",
+        totalUsers = kpis?.totalUsers ?: 0,
+        activeToday = kpis?.activeToday ?: 0,
+        monthCalls = kpis?.monthVisits ?: 0,
+        monthSpendInr = kpis?.monthSpendInr?.toInt() ?: 0,
+        pendingSignups = kpis?.pendingClients ?: 0,
+        billing = billing,
+    )
 
     AdminHomeScaffold(
         state = state,

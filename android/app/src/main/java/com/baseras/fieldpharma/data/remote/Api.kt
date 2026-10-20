@@ -65,7 +65,11 @@ interface Api {
     suspend fun listExpenses(
         @Query("from") from: String? = null,
         @Query("to") to: String? = null,
+        @Query("status") status: String? = null,
     ): ExpenseListRes
+
+    @PATCH("/api/expenses/{id}/review")
+    suspend fun reviewExpense(@Path("id") id: String, @Body req: ExpenseReviewReq): ExpenseRes
 
     @GET("/api/expense-policies/me")
     suspend fun myExpensePolicy(): ExpensePolicyRes
@@ -93,7 +97,91 @@ interface Api {
     // ───────── Billing ─────────
     @GET("/api/billing/status")
     suspend fun billingStatus(): BillingStatusRes
+
+    // ───────── Dashboard — role-aware summary ─────────
+    @GET("/api/dashboard/role-summary")
+    suspend fun roleSummary(): RoleSummaryRes
+
+    // ───────── Billing — admin-side ─────────
+    @GET("/api/billing/invoices")
+    suspend fun billingInvoices(): BillingInvoicesRes
+
+    @POST("/api/billing/upgrade")
+    suspend fun billingUpgrade(@Body req: BillingUpgradeReq): BillingUpgradeRes
 }
+
+@Serializable data class BillingInvoicesRes(val invoices: List<InvoiceDto>)
+@Serializable
+data class InvoiceDto(
+    val id: String,
+    val number: String,
+    val cycle: String,
+    val periodStart: String,
+    val periodEnd: String,
+    val activeRepCount: Int,
+    val subtotalPaise: Long,
+    val gstPaise: Long,
+    val totalPaise: Long,
+    val status: String,
+    val dueAt: String,
+    val paidAt: String? = null,
+    val pdfUrl: String? = null,
+)
+
+@Serializable data class BillingUpgradeReq(val cycle: String)
+@Serializable data class BillingUpgradeRes(
+    val invoice: InvoiceSummary,
+    val paymentLink: String,
+)
+@Serializable data class InvoiceSummary(
+    val id: String,
+    val number: String,
+    val totalPaise: Long,
+    val activeRepCount: Int,
+    val discountPct: Int,
+    val cycle: String,
+)
+
+@Serializable
+data class RoleSummaryRes(
+    val role: String,
+    val kpis: RoleKpis,
+    val team: List<TeamRollup> = emptyList(),
+)
+
+@Serializable
+data class RoleKpis(
+    val totalUsers: Int = 0,
+    val totalReps: Int = 0,
+    val activeToday: Int = 0,
+    val callsToday: Int = 0,
+    val callsPlannedToday: Int = 0,
+    val monthVisits: Int = 0,
+    val monthPlanned: Int = 0,
+    val attainmentPct: Int = 0,
+    val pendingTourPlans: Int = 0,
+    val pendingExpensesCount: Int = 0,
+    val pendingExpensesAmount: Double = 0.0,
+    val monthSpendInr: Double = 0.0,
+    val pendingClients: Int = 0,
+    val billableUsers: Int = 0,
+)
+
+@Serializable
+data class TeamRollup(
+    val id: String,
+    val name: String,
+    val role: String,
+    val grade: String? = null,
+    val activeToday: Int,
+    val totalReps: Int,
+    val callsToday: Int,
+    val callsPlanned: Int,
+    val monthVisits: Int,
+    val monthPlanned: Int,
+    val attainmentPct: Int,
+    val status: String, // ActiveToday | NotPunched | OffField | Flagged
+)
 
 @Serializable
 data class BillingStatusRes(val subscription: SubscriptionDto)
@@ -230,10 +318,14 @@ data class ExpenseDto(
     val fromLocation: String? = null, val toLocation: String? = null,
     val distanceKm: Double? = null,
     val billPhoto: String? = null, val remarks: String? = null,
+    val user: ExpenseSubmitter? = null,
 )
+
+@Serializable data class ExpenseSubmitter(val id: String, val name: String, val employeeCode: String? = null)
 
 @Serializable data class ExpenseRes(val expense: ExpenseDto)
 @Serializable data class ExpenseListRes(val expenses: List<ExpenseDto>)
+@Serializable data class ExpenseReviewReq(val status: String, val remarks: String? = null)
 
 @Serializable
 data class ExpensePolicyDto(
