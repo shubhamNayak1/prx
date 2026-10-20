@@ -19,3 +19,6 @@ android/.cxx/
 *.apk
 *.aab
 *.keystore
+
+# Backend lock file — keep for reproducibility but it might be huge
+# package-lock.json

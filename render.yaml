@@ -1,20 +1,23 @@
 # Render Blueprint for the FieldPharma backend.
-# Connects to a Neon (or any Postgres) DB via the DATABASE_URL env var.
+# One web service + three cron jobs; connects to a Neon (or any Postgres) DB
+# via DATABASE_URL set in the Render dashboard.
 #
 # Usage:
 #   1. Push this repo to GitHub
 #   2. dashboard.render.com → New → Blueprint → pick the repo
-#   3. Set DATABASE_URL in the Render env-vars dialog (paste your Neon connection string)
-#   4. Render auto-runs migrations + starts the API
+#   3. Fill in DATABASE_URL (and the secret keys you have — rest can stay blank
+#      until you wire the providers)
+#   4. Render auto-runs migrations + starts the API + schedules the crons
 
 services:
+  # ──────────────── API ────────────────
   - type: web
     name: fieldpharma-api
     runtime: node
     plan: free
     rootDir: backend
-    # `--include=dev` keeps Prisma CLI + tsc available at build time (Render sets
-    # NODE_ENV=production for npm install). Migrations run on every deploy.
+    # --include=dev keeps Prisma CLI + tsc available at build time
+    # (Render sets NODE_ENV=production, which otherwise prunes devDeps).
     buildCommand: npm install --include=dev && npx prisma generate && npm run build && npx prisma migrate deploy
     startCommand: npm start
     healthCheckPath: /health
@@ -22,10 +25,73 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: DATABASE_URL
-        sync: false        # set this manually in the Render dashboard (paste from Neon)
+        sync: false              # paste from Neon in the Render dashboard
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 30d
       - key: CORS_ORIGIN
-        value: "*"         # tighten to your admin URL once Vercel/admin is deployed
+        value: "*"               # tighten to your admin / marketing host after first deploy
+      - key: APP_URL
+        sync: false              # set to your admin/marketing hostname once known
+      # Cron auth — SAME value is set on the cron jobs below.
+      - key: CRON_KEY
+        generateValue: true
+      # ── Razorpay (optional at first; stub links otherwise) ──
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # ── MSG91 WhatsApp (primary OTP channel) ──
+      - key: MSG91_WA_AUTH_KEY
+        sync: false
+      - key: MSG91_WA_INTEGRATED_NUMBER
+        sync: false
+      - key: MSG91_WA_TEMPLATE_NAME
+        sync: false
+      - key: MSG91_WA_LANGUAGE_CODE
+        value: en
+      - key: MSG91_WA_NAMESPACE
+        sync: false
+      # ── MSG91 SMS (fallback OTP channel) ──
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_SENDER_ID
+        sync: false
+      - key: MSG91_OTP_TEMPLATE_ID
+        sync: false
+
+  # ──────────────── Cron: lock expired trials ────────────────
+  # Flips TRIAL subscriptions to LOCKED once trialEndsAt has passed.
+  - type: cron
+    name: fieldpharma-trial-lock
+    runtime: docker
+    schedule: "30 0 * * *"       # 00:30 UTC daily (= 06:00 IST)
+    dockerfilePath: ./backend/cron/Dockerfile
+    envVars:
+      - key: TARGET_URL
+        value: https://fieldpharma-api.onrender.com/api/billing/cron/trial-lock
+      - key: CRON_KEY
+        fromService:
+          type: web
+          name: fieldpharma-api
+          envVarKey: CRON_KEY
+
+  # ──────────────── Cron: generate renewal invoices ────────────────
+  # For each ACTIVE subscription whose currentPeriodEnd has passed, generates
+  # the next invoice + payment link.
+  - type: cron
+    name: fieldpharma-rebill
+    runtime: docker
+    schedule: "45 0 * * *"       # 00:45 UTC daily (= 06:15 IST)
+    dockerfilePath: ./backend/cron/Dockerfile
+    envVars:
+      - key: TARGET_URL
+        value: https://fieldpharma-api.onrender.com/api/billing/cron/rebill
+      - key: CRON_KEY
+        fromService:
+          type: web
+          name: fieldpharma-api
+          envVarKey: CRON_KEY

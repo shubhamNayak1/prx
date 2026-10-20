@@ -4,15 +4,23 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { signToken } from '../lib/jwt';
 import { requireAuth } from '../middleware/auth';
+import { clientIp, rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyBy: (req) => `login:ip:${clientIp(req)}`,
+  message: 'Too many login attempts from this network. Please try again in 15 minutes.',
+});
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
 

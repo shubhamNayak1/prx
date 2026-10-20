@@ -89,7 +89,25 @@ interface Api {
 
     @GET("/api/rcpa")
     suspend fun listRcpa(): RcpaListRes
+
+    // ───────── Billing ─────────
+    @GET("/api/billing/status")
+    suspend fun billingStatus(): BillingStatusRes
 }
+
+@Serializable
+data class BillingStatusRes(val subscription: SubscriptionDto)
+
+@Serializable
+data class SubscriptionDto(
+    val status: String, // TRIAL | ACTIVE | PAST_DUE | LOCKED | CANCELLED
+    val cycle: String? = null,
+    val trialEndsAt: String? = null,
+    val currentPeriodStart: String? = null,
+    val currentPeriodEnd: String? = null,
+    val pricePerRepPaise: Int = 0,
+    val trialRepCap: Int? = null,
+)
 
 @Serializable data class LoginReq(val email: String, val password: String)
 @Serializable data class LoginRes(val token: String, val user: UserDto)

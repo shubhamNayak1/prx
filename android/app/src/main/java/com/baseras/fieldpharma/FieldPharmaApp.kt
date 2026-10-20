@@ -2,10 +2,12 @@ package com.baseras.fieldpharma
 
 import android.app.Application
 import com.baseras.fieldpharma.auth.AuthStore
+import com.baseras.fieldpharma.billing.BillingStore
 import com.baseras.fieldpharma.data.local.AppDatabase
 import com.baseras.fieldpharma.data.remote.ApiClient
 import com.baseras.fieldpharma.data.repo.AttendanceRepository
 import com.baseras.fieldpharma.data.repo.AuthRepository
+import com.baseras.fieldpharma.data.repo.BillingRepository
 import com.baseras.fieldpharma.data.repo.ClientRepository
 import com.baseras.fieldpharma.data.repo.EdetailRepository
 import com.baseras.fieldpharma.data.repo.ExpenseRepository
@@ -19,9 +21,11 @@ import com.baseras.fieldpharma.sync.scheduleSync
 
 class FieldPharmaApp : Application() {
     lateinit var authStore: AuthStore
+    lateinit var billingStore: BillingStore
     lateinit var db: AppDatabase
     lateinit var api: com.baseras.fieldpharma.data.remote.Api
     lateinit var authRepo: AuthRepository
+    lateinit var billingRepo: BillingRepository
     lateinit var attendanceRepo: AttendanceRepository
     lateinit var clientRepo: ClientRepository
     lateinit var tourPlanRepo: TourPlanRepository
@@ -39,10 +43,12 @@ class FieldPharmaApp : Application() {
         instance = this
         SyncTrigger.init(this)
         authStore = AuthStore(this)
+        billingStore = BillingStore(this)
         db = AppDatabase.create(this)
         val (apiInstance, _) = ApiClient.create(BuildConfig.API_URL, authStore)
         api = apiInstance
-        authRepo = AuthRepository(api, authStore)
+        authRepo = AuthRepository(api, authStore, billingStore)
+        billingRepo = BillingRepository(api, billingStore)
         attendanceRepo = AttendanceRepository(api, db.attendanceDao(), db.pendingSyncDao())
         clientRepo = ClientRepository(api, db.clientDao())
         tourPlanRepo = TourPlanRepository(api)

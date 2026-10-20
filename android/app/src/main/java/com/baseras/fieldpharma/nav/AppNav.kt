@@ -2,6 +2,9 @@ package com.baseras.fieldpharma.nav
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,6 +20,7 @@ import com.baseras.fieldpharma.ui.edetail.DeckViewerScreen
 import com.baseras.fieldpharma.ui.expense.ExpensesScreen
 import com.baseras.fieldpharma.ui.expense.NewExpenseScreen
 import com.baseras.fieldpharma.ui.home.HomeScreen
+import com.baseras.fieldpharma.ui.locked.LockedScreen
 import com.baseras.fieldpharma.ui.login.LoginScreen
 import com.baseras.fieldpharma.ui.rcpa.NewRcpaScreen
 import com.baseras.fieldpharma.ui.rcpa.RcpaScreen
@@ -24,9 +28,11 @@ import com.baseras.fieldpharma.ui.sample.SamplesScreen
 import com.baseras.fieldpharma.ui.tour.TourPlansScreen
 import com.baseras.fieldpharma.ui.visit.PickClientScreen
 import com.baseras.fieldpharma.ui.visit.VisitFlow
+import kotlinx.coroutines.launch
 
 object Routes {
     const val LOGIN = "login"
+    const val LOCKED = "locked"
     const val HOME = "home"
     const val ATTENDANCE = "attendance"
     const val CLIENTS = "clients"
@@ -52,7 +58,39 @@ object Routes {
 fun AppNav() {
     val nav = rememberNavController()
     val app = FieldPharmaApp.instance
-    val start = if (app.authRepo.isAuthenticated) Routes.HOME else Routes.LOGIN
+    val billing by app.billingStore.state.collectAsState()
+
+    val start = when {
+        !app.authRepo.isAuthenticated -> Routes.LOGIN
+        billing.isLocked -> Routes.LOCKED
+        else -> Routes.HOME
+    }
+
+    // Refresh billing on launch for already-signed-in users so a tenant
+    // locked between sessions is caught.
+    LaunchedEffect(Unit) {
+        if (app.authRepo.isAuthenticated) {
+            runCatching { app.billingRepo.refresh() }
+        }
+    }
+
+    // If billing flips to LOCKED while the app is open, boot into the lock
+    // screen; if it unlocks, go home.
+    LaunchedEffect(billing.status) {
+        if (!app.authRepo.isAuthenticated) return@LaunchedEffect
+        val current = nav.currentDestination?.route
+        if (billing.isLocked && current != Routes.LOCKED && current != Routes.LOGIN) {
+            nav.navigate(Routes.LOCKED) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        } else if (!billing.isLocked && current == Routes.LOCKED) {
+            nav.navigate(Routes.HOME) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         app.authStore.events.collect { event ->
@@ -70,8 +108,24 @@ fun AppNav() {
     NavHost(navController = nav, startDestination = start) {
         composable(Routes.LOGIN) {
             LoginScreen(onSignedIn = {
-                nav.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } }
+                // After login the LaunchedEffect(billing.status) above will
+                // route to LOCKED if needed; default is HOME.
+                val next = if (app.billingStore.state.value.isLocked) Routes.LOCKED else Routes.HOME
+                nav.navigate(next) { popUpTo(Routes.LOGIN) { inclusive = true } }
             })
+        }
+        composable(Routes.LOCKED) {
+            val coScope = rememberCoroutineScope()
+            LockedScreen(
+                status = billing.status,
+                onRetry = {
+                    coScope.launch { app.billingRepo.refresh() }
+                },
+                onSignOut = {
+                    app.authRepo.logout()
+                    nav.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+                },
+            )
         }
         composable(Routes.HOME) {
             HomeScreen(

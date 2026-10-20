@@ -32,7 +32,7 @@ const deckSchema = z.object({
   product: z.string().optional(),
 });
 
-router.post('/decks', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) => {
+router.post('/decks', requireRole(Role.ADMIN, Role.SENIOR_MANAGER, Role.REGIONAL_MANAGER), async (req, res) => {
   const parsed = deckSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
   const deck = await prisma.edetailDeck.create({
@@ -49,7 +49,7 @@ const slideSchema = z.object({
   imageUrl: z.string().min(1),
 });
 
-router.post('/decks/:deckId/slides', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) => {
+router.post('/decks/:deckId/slides', requireRole(Role.ADMIN, Role.SENIOR_MANAGER, Role.REGIONAL_MANAGER), async (req, res) => {
   const deck = await prisma.edetailDeck.findFirst({
     where: { id: req.params.deckId, companyId: req.auth!.companyId },
   });
@@ -64,7 +64,7 @@ router.post('/decks/:deckId/slides', requireRole(Role.ADMIN, Role.MANAGER), asyn
   res.status(201).json({ slide });
 });
 
-router.delete('/slides/:id', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) => {
+router.delete('/slides/:id', requireRole(Role.ADMIN, Role.SENIOR_MANAGER, Role.REGIONAL_MANAGER), async (req, res) => {
   const slide = await prisma.edetailSlide.findFirst({
     where: { id: req.params.id },
     include: { deck: true },

@@ -4,19 +4,30 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { getToken, Role, ROLE_LABEL } from '@/lib/auth';
 
-type Manager = { id: string; name: string; role: string };
+type Manager = { id: string; name: string; role: Role };
+
+// Mirrors backend/src/lib/roles.ts#canReportTo so the dropdown only lists
+// managers the chosen role is allowed to report to.
+function parentRolesFor(role: Role): Role[] {
+  switch (role) {
+    case 'SENIOR_MANAGER': return ['ADMIN'];
+    case 'REGIONAL_MANAGER': return ['ADMIN', 'SENIOR_MANAGER'];
+    case 'FIELD_PERSON': return ['ADMIN', 'SENIOR_MANAGER', 'REGIONAL_MANAGER'];
+    case 'ADMIN': return [];
+  }
+}
 
 export default function NewUserPage() {
   const router = useRouter();
-  const [managers, setManagers] = useState<Manager[]>([]);
+  const [allManagers, setAllManagers] = useState<Manager[]>([]);
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
     phone: '',
-    role: 'MR' as 'ADMIN' | 'MANAGER' | 'MR',
+    role: 'FIELD_PERSON' as Role,
     grade: 'MR1',
     employeeCode: '',
     managerId: '',
@@ -26,9 +37,12 @@ export default function NewUserPage() {
 
   useEffect(() => {
     api<{ users: Manager[] }>('/api/users', { token: getToken() }).then((r) => {
-      setManagers(r.users.filter((u) => u.role === 'MANAGER' || u.role === 'ADMIN'));
+      setAllManagers(r.users.filter((u) => u.role !== 'FIELD_PERSON'));
     });
   }, []);
+
+  const allowedParents = parentRolesFor(form.role);
+  const managers = allMgrsVisible(allManagers, allowedParents);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,9 +99,10 @@ export default function NewUserPage() {
         <div className="grid grid-cols-2 gap-4">
           <Row label="Role *">
             <select {...field('role')} className="input">
+              <option value="FIELD_PERSON">Field Person</option>
+              <option value="REGIONAL_MANAGER">Regional Manager</option>
+              <option value="SENIOR_MANAGER">Senior Manager</option>
               <option value="ADMIN">Admin</option>
-              <option value="MANAGER">Manager</option>
-              <option value="MR">MR (Medical Rep)</option>
             </select>
           </Row>
           <Row label="Grade">
@@ -106,14 +121,18 @@ export default function NewUserPage() {
           <input {...field('employeeCode')} className="input" />
         </Row>
 
-        <Row label="Reports to">
-          <select {...field('managerId')} className="input">
-            <option value="">— None —</option>
-            {managers.map((m) => (
-              <option key={m.id} value={m.id}>{m.name} ({m.role})</option>
-            ))}
-          </select>
-        </Row>
+        {form.role !== 'ADMIN' && (
+          <Row label="Reports to *">
+            <select {...field('managerId')} className="input" required>
+              <option value="">— Pick a manager —</option>
+              {managers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({ROLE_LABEL[m.role]})
+                </option>
+              ))}
+            </select>
+          </Row>
+        )}
 
         {err && <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{err}</div>}
 
@@ -156,4 +175,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <div className="mt-1">{children}</div>
     </label>
   );
+}
+
+function allMgrsVisible(all: Manager[], allowed: Role[]): Manager[] {
+  return all.filter((m) => allowed.includes(m.role));
 }

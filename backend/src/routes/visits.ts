@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
   const where: any = {};
   if (from && to) where.checkInAt = { gte: new Date(from), lte: new Date(to) };
 
-  if (req.auth!.role === Role.MR) {
+  if (req.auth!.role === Role.FIELD_PERSON) {
     where.userId = req.auth!.userId;
   } else if (userId) {
     where.userId = userId;

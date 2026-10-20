@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseras FieldPharma — Test Plan</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    margin: 0;
+    background: #F8FAFC;
+    color: #0F172A;
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, #0F766E 0%, #134E4A 100%);
+    color: white;
+    padding: 32px 48px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 28px; font-weight: 600; }
+  header .subtitle { opacity: 0.85; font-size: 14px; }
+  .brand-tag {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 4px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 48px 80px; }
+  section { margin-top: 40px; }
+  h2 {
+    font-size: 20px;
+    color: #0F766E;
+    border-bottom: 2px solid #E2E8F0;
+    padding-bottom: 8px;
+    margin: 0 0 16px;
+  }
+  h3 { font-size: 16px; margin-top: 24px; margin-bottom: 8px; color: #134E4A; }
+  p { margin: 8px 0; }
+  code {
+    background: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    font-size: 0.92em;
+  }
+  pre {
+    background: #1E293B;
+    color: #E2E8F0;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    font-size: 13px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 12px 0;
+  }
+  th {
+    background: #F1F5F9;
+    text-align: left;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+  }
+  td {
+    padding: 12px;
+    border-top: 1px solid #E2E8F0;
+    font-size: 14px;
+    vertical-align: top;
+  }
+  tr:hover td { background: #F8FAFC; }
+  .role {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .role.admin { background: #FCE7F3; color: #9D174D; }
+  .role.manager { background: #DBEAFE; color: #1E40AF; }
+  .role.mr { background: #DCFCE7; color: #166534; }
+  .credentials {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    background: #F1F5F9;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .scenario {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 4px solid #0F766E;
+  }
+  .scenario .id {
+    display: inline-block;
+    background: #0F766E;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-right: 10px;
+  }
+  .scenario h4 { display: inline; margin: 0; font-size: 16px; }
+  .scenario .meta {
+    font-size: 12px;
+    color: #64748B;
+    margin-top: 4px;
+  }
+  .scenario ol, .scenario ul {
+    padding-left: 20px;
+    margin: 8px 0;
+  }
+  .scenario .expected {
+    background: #ECFDF5;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    border-left: 3px solid #10B981;
+  }
+  .scenario .expected strong { color: #047857; }
+  .warning {
+    background: #FEF3C7;
+    border-left: 3px solid #F59E0B;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  .warning strong { color: #92400E; }
+  .info {
+    background: #DBEAFE;
+    border-left: 3px solid #3B82F6;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  .info strong { color: #1E40AF; }
+  .mermaid {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 16px 0;
+    text-align: center;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    main { padding: 24px 16px; }
+    header { padding: 24px; }
+  }
+  .toc {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-top: 24px;
+    border: 1px solid #E2E8F0;
+  }
+  .toc ol { margin: 8px 0; padding-left: 24px; }
+  .toc a { color: #0F766E; text-decoration: none; font-size: 14px; }
+  .toc a:hover { text-decoration: underline; }
+  .checkbox {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #94A3B8;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: -2px;
+  }
+  .step-num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    border-radius: 50%;
+    background: #0F766E;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Baseras FieldPharma — Test Plan</h1>
+  <div class="subtitle">QA test scenarios for the MR field-force management platform</div>
+  <span class="brand-tag">v0.1.0 · Generated 2026-05-09</span>
+</header>
+
+<main>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#env">Test environment & credentials</a></li>
+    <li><a href="#mobile-flow">Mobile UI flow diagram</a></li>
+    <li><a href="#admin-flow">Admin UI flow diagram</a></li>
+    <li><a href="#scenarios">End-to-end test scenarios (TC-01 to TC-15)</a></li>
+    <li><a href="#caveats">Known caveats — not bugs</a></li>
+  </ol>
+</div>
+
+<!-- ========== ENVIRONMENT ========== -->
+<section id="env">
+  <h2>1. Test environment & credentials</h2>
+
+  <h3>URLs</h3>
+  <table>
+    <tr><th>Service</th><th>URL / location</th><th>Smoke test</th></tr>
+    <tr>
+      <td><strong>Backend API</strong></td>
+      <td><code>https://fieldpharma-api.onrender.com</code></td>
+      <td><code>curl /health</code> → <code>{"ok":true}</code></td>
+    </tr>
+    <tr>
+      <td><strong>Mobile app</strong></td>
+      <td><code>app-release.apk</code> sideloaded on Android device</td>
+      <td>Login screen appears</td>
+    </tr>
+    <tr>
+      <td><strong>Admin panel</strong></td>
+      <td>Run locally: <code>cd admin && npm run dev</code> → <code>http://localhost:3000</code></td>
+      <td>Login screen appears</td>
+    </tr>
+  </table>
+
+  <div class="warning">
+    <strong>⚠ Cold start:</strong> First request after 15+ minutes idle takes ~30 seconds (Render free tier wakes up). Document any 30s-then-success as <em>expected behavior</em>, not a bug.
+  </div>
+
+  <h3>Login matrix</h3>
+  <table>
+    <tr>
+      <th>Role</th>
+      <th>Email</th>
+      <th>Password</th>
+      <th>Where</th>
+      <th>Visibility</th>
+    </tr>
+    <tr>
+      <td><span class="role admin">ADMIN</span></td>
+      <td><span class="credentials">admin@baseras.test</span></td>
+      <td><span class="credentials">admin123</span></td>
+      <td>Admin web only</td>
+      <td>Entire company</td>
+    </tr>
+    <tr>
+      <td><span class="role manager">RSM</span></td>
+      <td><span class="credentials">rsm.north@baseras.test</span></td>
+      <td><span class="credentials">manager123</span></td>
+      <td>Admin web only</td>
+      <td>RSM → ASM → 4 MRs</td>
+    </tr>
+    <tr>
+      <td><span class="role manager">ASM</span></td>
+      <td><span class="credentials">asm.delhi@baseras.test</span></td>
+      <td><span class="credentials">manager123</span></td>
+      <td>Admin web only</td>
+      <td>4 direct-report MRs</td>
+    </tr>
+    <tr>
+      <td><span class="role mr">MR</span></td>
+      <td><span class="credentials">mr.amit@baseras.test</span></td>
+      <td><span class="credentials">mr123</span></td>
+      <td>Mobile app only</td>
+      <td>Own data only</td>
+    </tr>
+    <tr>
+      <td><span class="role mr">MR</span></td>
+      <td><span class="credentials">mr.priya@baseras.test</span></td>
+      <td><span class="credentials">mr123</span></td>
+      <td>Mobile app only</td>
+      <td>Own data only</td>
+    </tr>
+    <tr>
+      <td><span class="role mr">MR</span></td>
+      <td><span class="credentials">mr.ravi@baseras.test</span></td>
+      <td><span class="credentials">mr123</span></td>
+      <td>Mobile app only</td>
+      <td>Own data only</td>
+    </tr>
+    <tr>
+      <td><span class="role mr">MR</span></td>
+      <td><span class="credentials">mr.neha@baseras.test</span></td>
+      <td><span class="credentials">mr123</span></td>
+      <td>Mobile app only</td>
+      <td>Own data only</td>
+    </tr>
+  </table>
+
+  <div class="info">
+    <strong>ℹ Hierarchy:</strong> RSM → ASM → 4 MRs. RSM sees all team data. ASM sees the 4 MRs. Each MR sees only their own data.
+  </div>
+</section>
+
+<!-- ========== MOBILE FLOW ========== -->
+<section id="mobile-flow">
+  <h2>2. Mobile UI flow diagram (MR app)</h2>
+  <div class="mermaid">
+flowchart TD
+    Start([📱 Open app]) --> Login{Login screen}
+    Login -->|valid MR creds| Home["🏠 Home — 8 tiles"]
+    Login -->|wrong password| LoginErr["❌ Invalid credentials"]
+    Login -->|admin or manager| RoleErr["❌ Only MR accounts allowed"]
+
+    Home --> Att["⏰ Attendance"]
+    Home --> Cli["🏥 Clients"]
+    Home --> Vis["📍 Visits / DCR"]
+    Home --> Tour["📅 Tour plans"]
+    Home --> Exp["💰 Expenses"]
+    Home --> Sam["🎁 Samples"]
+    Home --> Edt["📊 E-detailing"]
+    Home --> Rcp["📈 RCPA"]
+    Home --> SignOut["Sign out"]
+
+    Att --> AttSelfie["Take selfie - optional"]
+    AttSelfie --> AttIn["Tap Punch In - GPS auto-captured"]
+    AttIn --> AttDone["✅ Saved with location"]
+    AttIn -.later.-> AttOut["Tap Punch Out"]
+
+    Cli --> CliSearch["Search + cached list"]
+    CliSearch --> CliNew["➕ New client form"]
+
+    Vis --> VisStart["Tap Start a visit"]
+    VisStart --> VisPick["Pick client"]
+    VisPick --> VisIn["Check-in - GPS"]
+    VisIn --> VisNotes["Notes + products discussed"]
+    VisNotes --> VisOut["Tap Check out"]
+    VisOut --> VisDone["✅ DCR saved → queued for sync"]
+
+    Exp --> ExpNew["➕ New expense"]
+    ExpNew --> ExpType{Pick type}
+    ExpType -->|TA| ExpTA["From + To + km<br/>₹ auto-calculates"]
+    ExpType -->|DA| ExpDA["Daily rate auto-fills"]
+    ExpType -->|ACTUAL| ExpAct["Category + 📷 bill photo"]
+    ExpTA --> ExpSubmit["Submit"]
+    ExpDA --> ExpSubmit
+    ExpAct --> ExpSubmit
+    ExpSubmit --> ExpQueue["✅ Pending admin approval"]
+
+    Sam --> SamBal["Balance per product<br/>Issued / Used / Left"]
+    SamBal --> SamDist["Tap Distribute → enter qty"]
+
+    Edt --> EdtList["Decks list"]
+    EdtList --> EdtView["Swipe slides<br/>per-slide timer"]
+
+    Rcp --> RcpNew["➕ New entry"]
+    RcpNew --> RcpForm["Pick chemist + brand qtys"]
+
+    classDef pos fill:#0F766E,stroke:#0F766E,color:#fff
+    classDef neg fill:#FCA5A5,stroke:#DC2626,color:#7F1D1D
+    class AttDone,VisDone,ExpQueue pos
+    class LoginErr,RoleErr neg
+  </div>
+</section>
+
+<!-- ========== ADMIN FLOW ========== -->
+<section id="admin-flow">
+  <h2>3. Admin UI flow diagram</h2>
+  <div class="mermaid">
+flowchart TD
+    AdminStart([💻 Open admin URL]) --> AdminLogin{Login}
+    AdminLogin -->|admin/manager creds| AdminHome["🏠 360° Overview Dashboard"]
+    AdminLogin -->|MR creds| AdminMRErr["❌ MR must use mobile"]
+
+    AdminHome --> StatCards["Stat cards:<br/>• MRs in scope<br/>• Punched in today<br/>• Plan attainment %<br/>• Visits this month<br/>• Pending expenses<br/>• Monthly spend<br/>• Pending tour plans"]
+    AdminHome --> VisitsTrend["📈 30-day visits trend chart"]
+    AdminHome --> BrandShare["📊 Top brands chart - RCPA"]
+
+    AdminHome --> Users["👥 Users"]
+    Users --> UserCreate["➕ Create user with role + grade + manager"]
+    AdminHome --> Hier["🌳 Hierarchy tree"]
+    AdminHome --> Clients["🏥 Clients - filter by type"]
+    AdminHome --> TourPlans["📅 Tour plans - approve/reject"]
+    AdminHome --> Visits["📍 Visits - DCR list with duration"]
+    AdminHome --> Expenses["💰 Expenses - approve/reject<br/>view bill photos"]
+    AdminHome --> Policies["💼 Expense rates per grade"]
+    AdminHome --> Samples["🎁 Samples - products + issuance"]
+    AdminHome --> Edetail["📊 E-detailing - manage decks"]
+    AdminHome --> Rcpa["📈 RCPA - brand share chart"]
+
+    classDef neg fill:#FCA5A5,stroke:#DC2626,color:#7F1D1D
+    class AdminMRErr neg
+  </div>
+</section>
+
+<!-- ========== TEST SCENARIOS ========== -->
+<section id="scenarios">
+  <h2>4. End-to-end test scenarios</h2>
+  <p>Each scenario lists the actor (login), prerequisites, steps, and the expected result. Run them roughly in order — earlier scenarios create state used by later ones.</p>
+
+  <!-- TC-01 -->
+  <div class="scenario">
+    <span class="id">TC-01</span>
+    <h4>Mobile login — happy path</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: APK installed on phone</div>
+    <ol>
+      <li>Open <strong>Baseras FieldPharma</strong> app</li>
+      <li>Email: <code>mr.amit@baseras.test</code> · Password: <code>mr123</code></li>
+      <li>Tap <strong>Sign in</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Home screen shows <em>"Hi, Amit"</em> at top and 8 feature tiles. (First sign-in may take ~30s — cold start.)</div>
+  </div>
+
+  <!-- TC-02 -->
+  <div class="scenario">
+    <span class="id">TC-02</span>
+    <h4>Mobile login — wrong credentials rejected</h4>
+    <div class="meta">Actor: MR Amit · Negative test</div>
+    <ol>
+      <li>From login screen, type <code>mr.amit@baseras.test</code> / <code>wrongpass</code></li>
+      <li>Tap <strong>Sign in</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Red error <em>"Invalid credentials"</em> appears below the form. User stays on login screen.</div>
+  </div>
+
+  <!-- TC-03 -->
+  <div class="scenario">
+    <span class="id">TC-03</span>
+    <h4>Mobile login — admin/manager rejected</h4>
+    <div class="meta">Actor: tries to use admin creds on phone · Negative test</div>
+    <ol>
+      <li>From login screen, type <code>admin@baseras.test</code> / <code>admin123</code></li>
+      <li>Tap <strong>Sign in</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Error message: <em>"Only MR accounts can sign in here. Use admin panel for managers."</em></div>
+  </div>
+
+  <!-- TC-04 -->
+  <div class="scenario">
+    <span class="id">TC-04</span>
+    <h4>Geo-tagged attendance with selfie</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: signed in</div>
+    <ol>
+      <li>Tap <strong>Attendance</strong> tile</li>
+      <li>If permission prompt appears, allow <strong>Location</strong> + <strong>Camera</strong></li>
+      <li>Tap <strong>Take attendance selfie</strong> — camera opens — snap a photo</li>
+      <li>Verify "Selfie ready (X KB)" label updates</li>
+      <li>Tap <strong>Punch In</strong></li>
+    </ol>
+    <div class="expected">
+      <strong>Expected:</strong> Status card shows today's date, punch-in time, and "Pending sync" disappears within ~30s when selfie uploads. <br>
+      <strong>Verify cross-system:</strong> as admin, go to <code>/api/attendance/today</code> for Amit and confirm <code>punchInPhoto</code> URL is set.
+    </div>
+  </div>
+
+  <!-- TC-05 -->
+  <div class="scenario">
+    <span class="id">TC-05</span>
+    <h4>Offline punch-in queues + auto-syncs</h4>
+    <div class="meta">Actor: MR Priya · Prerequisite: signed in · Type: offline-first</div>
+    <ol>
+      <li>Sign in as <code>mr.priya@baseras.test</code> / <code>mr123</code></li>
+      <li>Enable <strong>Airplane mode</strong> on the phone</li>
+      <li>Go to Attendance → Punch In (skip selfie or take one)</li>
+      <li>Verify "Pending sync" chip appears on attendance card</li>
+      <li>Verify Home shows "1 item pending sync"</li>
+      <li>Disable airplane mode</li>
+      <li>Wait up to 15 min — or quit + reopen app to force sync</li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Pending count drops to 0. Attendance card no longer shows "Pending sync".</div>
+  </div>
+
+  <!-- TC-06 -->
+  <div class="scenario">
+    <span class="id">TC-06</span>
+    <h4>Browse + create a client</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: signed in</div>
+    <ol>
+      <li>Tap <strong>Clients</strong> tile</li>
+      <li>Verify ~7 seeded clients appear (Dr. Anand Mehta, Apollo Pharmacy Bandra, etc.)</li>
+      <li>Type <code>anand</code> in search box → list filters in real-time</li>
+      <li>Tap <strong>+</strong> FAB → fill <em>Name</em>: "Dr. Test Doctor", <em>Type</em>: DOCTOR, <em>Speciality</em>: General, <em>City</em>: Mumbai</li>
+      <li>Tap <strong>Save</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Returns to clients list. New client visible at top of list.</div>
+  </div>
+
+  <!-- TC-07 -->
+  <div class="scenario">
+    <span class="id">TC-07</span>
+    <h4>Full visit / DCR flow</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: clients exist</div>
+    <ol>
+      <li>Home → <strong>Visits / DCR</strong></li>
+      <li>Tap <strong>Start a visit — pick a client</strong></li>
+      <li>Select <em>Dr. Anand Mehta</em></li>
+      <li>Verify "Visit in progress" header appears, with check-in time</li>
+      <li>Type <em>Products discussed</em>: <code>Baseraz, Cardex</code></li>
+      <li>Type <em>Notes</em>: "Discussed Q3 rollout, doctor receptive"</li>
+      <li>Tap <strong>Save</strong></li>
+      <li>Tap <strong>Check out</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> "Visit completed and queued for sync" message. Visit appears in <em>Recent visits</em> list at the bottom. After ~15 min (or app restart) state changes from <code>COMPLETED</code> → <code>SYNCED</code>.</div>
+  </div>
+
+  <!-- TC-08 -->
+  <div class="scenario">
+    <span class="id">TC-08</span>
+    <h4>TA expense — auto-calculation</h4>
+    <div class="meta">Actor: MR Amit · Verify: rate from grade policy</div>
+    <ol>
+      <li>Home → <strong>Expenses</strong> → tap <strong>+</strong></li>
+      <li>Type: <em>Travel (TA)</em></li>
+      <li>From: <code>Pune</code>, To: <code>Mumbai</code>, Distance: <code>150</code>, Mode: <code>train</code></li>
+      <li>Verify <strong>Amount</strong> field auto-fills with <code>600.00</code> (150 km × ₹4/km for grade MR1)</li>
+      <li>Optional: type a remark</li>
+      <li>Tap <strong>Submit</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Returns to expense list. New TA entry visible with <em>"Pending"</em> badge.</div>
+  </div>
+
+  <!-- TC-09 -->
+  <div class="scenario">
+    <span class="id">TC-09</span>
+    <h4>ACTUAL expense with bill photo</h4>
+    <div class="meta">Actor: MR Amit · Verify: photo upload</div>
+    <ol>
+      <li>Expenses → <strong>+</strong></li>
+      <li>Type: <em>Actual bill</em></li>
+      <li>Category: <code>Hotel</code></li>
+      <li>Tap <strong>Take bill photo</strong> → camera opens → snap any photo</li>
+      <li>Verify "Bill ready (X KB)" label appears</li>
+      <li>Amount: <code>2500</code></li>
+      <li>Tap <strong>Submit</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Submitted, returns to list. <strong>Cross-verify:</strong> as admin, go to Expenses page → click <em>"View"</em> on the bill column → photo loads in new tab.</div>
+  </div>
+
+  <!-- TC-10 -->
+  <div class="scenario">
+    <span class="id">TC-10</span>
+    <h4>Sample distribution — balance updates</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: seeded with 50 strips of Baseraz 200mg</div>
+    <ol>
+      <li>Home → <strong>Samples & gifts</strong></li>
+      <li>Verify "Baseraz 200mg Tablets" shows: Issued 50 / Used 0 / Left 50</li>
+      <li>Tap <strong>Distribute</strong></li>
+      <li>Quantity: <code>5</code></li>
+      <li>Tap <strong>Save</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Toast/message "Recorded 5 unit(s)". Balance updates to: Used 5 / Left 45.</div>
+  </div>
+
+  <!-- TC-11 -->
+  <div class="scenario">
+    <span class="id">TC-11</span>
+    <h4>Sample over-distribution rejected</h4>
+    <div class="meta">Actor: MR Amit · Negative test</div>
+    <ol>
+      <li>Home → Samples</li>
+      <li>Tap <strong>Distribute</strong> on any product</li>
+      <li>Type a quantity larger than "Left" (e.g. 999)</li>
+      <li>Tap Save</li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Either button is disabled, or error message "Only X units remaining" appears. No DB change.</div>
+  </div>
+
+  <!-- TC-12 -->
+  <div class="scenario">
+    <span class="id">TC-12</span>
+    <h4>E-detailing slide viewer with timer</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: seeded "Baseraz 200mg — Cardiology" deck</div>
+    <ol>
+      <li>Home → <strong>E-detailing</strong></li>
+      <li>Tap deck "Baseraz 200mg — Cardiology"</li>
+      <li>Verify slide 1 loads (white text on teal background, "Slide 1 Mechanism")</li>
+      <li>Wait ~5 seconds — timer at the bottom should read "Viewed: 5s" approximately</li>
+      <li>Swipe left to slide 2 → timer for slide 1 freezes; slide 2's timer starts</li>
+      <li>Continue to slide 3</li>
+      <li>Tap the X (close) at top-left</li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Returns to deck list. View durations are POSTed to backend in the background.</div>
+  </div>
+
+  <!-- TC-13 -->
+  <div class="scenario">
+    <span class="id">TC-13</span>
+    <h4>RCPA capture — competitor data at chemist</h4>
+    <div class="meta">Actor: MR Amit · Prerequisite: chemist clients exist (Apollo Pharmacy, Wellness Pharmacy)</div>
+    <ol>
+      <li>Home → <strong>RCPA</strong> → tap <strong>+</strong></li>
+      <li>Pick chemist: <em>Apollo Pharmacy Bandra</em></li>
+      <li>Date: leave today</li>
+      <li>Our brand: <code>Baseraz 200mg</code>, Qty: <code>30</code></li>
+      <li>Competitor brand: <code>Cardex 200mg</code>, Qty: <code>25</code></li>
+      <li>Remarks: <code>Stock running low</code></li>
+      <li>Tap <strong>Save</strong></li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> Returns to RCPA list, new entry visible at top.</div>
+  </div>
+
+  <!-- TC-14 (cross-app) -->
+  <div class="scenario">
+    <span class="id">TC-14</span>
+    <h4>Cross-app: admin approves submitted expense</h4>
+    <div class="meta">Actor: Admin · Prerequisite: TC-08 done (TA submitted by Amit)</div>
+    <ol>
+      <li>Open admin URL → sign in as <code>admin@baseras.test</code> / <code>admin123</code></li>
+      <li>Click <strong>Expenses</strong> in left nav</li>
+      <li>Top filter: "Pending" (default) → verify Amit's ₹600.00 TA appears</li>
+      <li>Click <strong>Approve</strong></li>
+    </ol>
+    <div class="expected">
+      <strong>Expected:</strong> Status badge flips from yellow "PENDING" → green "APPROVED". Pending count + total in the summary bar drops by 1 / ₹600.<br>
+      <strong>Cross-verify on phone:</strong> Quit + reopen MR Amit's app → Expenses → the entry now shows <em>Approved</em> chip.
+    </div>
+  </div>
+
+  <!-- TC-15 (cross-app) -->
+  <div class="scenario">
+    <span class="id">TC-15</span>
+    <h4>Cross-app: admin sees DCR + 360° dashboard updates</h4>
+    <div class="meta">Actor: Admin · Prerequisite: at least 1 visit, 1 expense, 1 RCPA done</div>
+    <ol>
+      <li>Sign in to admin as Admin or RSM</li>
+      <li><strong>Overview</strong> page: verify "Visits this month" stat reflects new visits</li>
+      <li>Verify "Pending expenses" includes the recent submissions</li>
+      <li>30-day visit trend chart shows a bar/dot for today</li>
+      <li>Brand share chart shows the brand from TC-13</li>
+      <li>Click <strong>Visits</strong> in nav → see DCR row from TC-07 with the notes "Discussed Q3 rollout..."</li>
+      <li>Click <strong>RCPA</strong> in nav → see entry from TC-13 + comparison chart</li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> All 3 dashboards reflect the MR's submissions. Brand share chart shows both "Our" and "Competitor" bars.</div>
+  </div>
+
+  <!-- Manager scoping -->
+  <div class="scenario">
+    <span class="id">TC-16</span>
+    <h4>Manager scoping — RSM sees their team only</h4>
+    <div class="meta">Actor: RSM · Verify: hierarchy isolation</div>
+    <ol>
+      <li>Sign in as <code>rsm.north@baseras.test</code> / <code>manager123</code></li>
+      <li>Overview should show "MRs in scope: 4" (the 4 seeded MRs under RSM → ASM)</li>
+      <li>Visits page should show only visits done by the 4 MRs</li>
+      <li>Expenses page should show only expenses claimed by them</li>
+    </ol>
+    <div class="expected"><strong>Expected:</strong> No data from outside the RSM's hierarchy is visible. (To prove this, you'd need a second RSM — currently only one in seed data.)</div>
+  </div>
+
+</section>
+
+<!-- ========== KNOWN CAVEATS ========== -->
+<section id="caveats">
+  <h2>5. Known caveats — not bugs</h2>
+  <div class="warning">
+    <strong>Render free-tier cold start (~30s):</strong> First API call after 15+ minutes of inactivity. Subsequent calls are instant.
+  </div>
+  <div class="warning">
+    <strong>Uploaded photos may disappear after redeploy:</strong> Render free tier has ephemeral filesystem. Selfies + bill photos uploaded to <code>/api/uploads</code> are wiped on every backend redeploy. For real production, swap to S3.
+  </div>
+  <div class="warning">
+    <strong>Sync interval is 15 min:</strong> Pending items don't push instantly. Force a sync by quitting + reopening the app (it triggers WorkManager). For testers needing immediate sync, this is the workaround.
+  </div>
+  <div class="warning">
+    <strong>Tour plan creation from mobile:</strong> Not yet implemented (Phase 3.1). Tour plans only show — they're created from admin or via direct API.
+  </div>
+  <div class="warning">
+    <strong>Database wipe on schema change:</strong> Room v3 with destructive migration — if app is updated with schema changes, local data resets.
+  </div>
+  <div class="warning">
+    <strong>JWT expiry — 30 days:</strong> Token expires → user is signed out → must log in again. Currently no refresh token.
+  </div>
+</section>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#0F766E',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#134E4A',
+      lineColor: '#475569',
+      secondaryColor: '#14B8A6',
+      tertiaryColor: '#F1F5F9',
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+  });
+</script>
+</body>
+</html>

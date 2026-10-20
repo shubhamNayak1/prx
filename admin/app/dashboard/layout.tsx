@@ -17,6 +17,7 @@ const NAV = [
   { href: '/dashboard/samples', label: 'Samples' },
   { href: '/dashboard/edetail', label: 'E-detailing' },
   { href: '/dashboard/rcpa', label: 'RCPA' },
+  { href: '/dashboard/billing', label: 'Billing' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

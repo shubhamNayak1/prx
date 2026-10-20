@@ -40,7 +40,7 @@ const issueSchema = z.object({
   quantity: z.number().int().positive(),
 });
 
-router.post('/issues', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) => {
+router.post('/issues', requireRole(Role.ADMIN, Role.SENIOR_MANAGER, Role.REGIONAL_MANAGER), async (req, res) => {
   const parsed = issueSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
 
@@ -60,7 +60,7 @@ router.post('/issues', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) =
 
 router.get('/issues', async (req, res) => {
   const where: any = {};
-  if (req.auth!.role === Role.MR) where.userId = req.auth!.userId;
+  if (req.auth!.role === Role.FIELD_PERSON) where.userId = req.auth!.userId;
   else if (req.query.userId) where.userId = req.query.userId;
 
   const issues = await prisma.sampleIssue.findMany({

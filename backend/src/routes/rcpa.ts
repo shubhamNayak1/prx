@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
   const where: any = {};
   if (from && to) where.date = { gte: new Date(from), lte: new Date(to) };
 
-  if (req.auth!.role === Role.MR) {
+  if (req.auth!.role === Role.FIELD_PERSON) {
     where.userId = req.auth!.userId;
   } else if (userId) {
     where.userId = userId;
@@ -79,7 +79,7 @@ router.get('/market-share', async (req, res) => {
     select: { id: true, managerId: true },
   });
   const ids = new Set<string>();
-  if (req.auth!.role === Role.MR) {
+  if (req.auth!.role === Role.FIELD_PERSON) {
     ids.add(req.auth!.userId);
   } else {
     const collect = (m: string) => {

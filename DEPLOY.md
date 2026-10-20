@@ -1,13 +1,17 @@
-# Deploy: Neon (DB) + Render (backend) + sideloaded APK
+# Deploy: Neon (DB) + Render (backend + crons) + sideloaded APK
 
-Total time: **~30 minutes** if you already have GitHub + an Android Studio install.
+Total time: **~45 minutes** on first deploy. Updates after that are a `git push`.
+
+**Architecture target**: Android app (field + admin + manager) + cloud backend. The web portal under `admin/` is kept for marketing, public signup, and billing only — all operational work is in Android.
 
 ## What you'll end up with
 
 - **Postgres** on Neon (free tier — 0.5 GB)
 - **Backend API** at `https://fieldpharma-api.onrender.com` (free tier)
+- **Two cron jobs** on Render (trial-lock, rebill)
 - **APK file** you can download and install on any Android phone
-- (Optional) **Admin panel** on Vercel
+- (Optional) **Marketing + billing site** on Vercel (`admin/`)
+- (Optional) **WhatsApp OTP** via MSG91 + **Payments** via Razorpay
 
 > **Heads up — Render free tier caveats**
 > - Spins down after 15 min of inactivity. First request after sleep takes ~30s
@@ -49,9 +53,14 @@ git push -u origin main
 
 1. Go to **https://dashboard.render.com**, sign in with GitHub
 2. **New +** → **Blueprint**
-3. Pick the `fieldpharma` repo. Render reads [`render.yaml`](render.yaml) automatically and shows a "fieldpharma-api" service ready to deploy
-4. Click **Apply** → it asks you to fill in `DATABASE_URL` — paste the Neon URL from Step 2
-5. `JWT_SECRET` is auto-generated. Leave `CORS_ORIGIN` as `*` for now
+3. Pick the `fieldpharma` repo. Render reads [`render.yaml`](render.yaml) and shows:
+   - One web service: `fieldpharma-api`
+   - Two cron jobs: `fieldpharma-trial-lock`, `fieldpharma-rebill`
+4. Click **Apply**. Render asks for the `sync: false` env vars:
+   - **`DATABASE_URL`** — paste the Neon URL (required)
+   - **`APP_URL`** — your admin/marketing host once deployed (e.g. `https://fieldpharma-admin.vercel.app`). Can be left blank at first.
+   - **Razorpay / MSG91 keys** — leave blank for now; the backend has dev stubs for both (payments return a stub URL, OTPs print to the server log).
+5. `JWT_SECRET` and `CRON_KEY` are auto-generated. `CORS_ORIGIN` stays `*` until the admin host is known.
 6. Click **Create New Resources**
 
 The first build takes ~3-5 min:
@@ -61,6 +70,8 @@ The first build takes ~3-5 min:
 - `prisma migrate deploy` applies migrations to Neon
 
 When it's green: get the URL from the top of the service page (e.g. `https://fieldpharma-api.onrender.com`).
+
+The crons run on Render's own schedule (06:00 and 06:15 IST daily). You don't need to trigger them; they POST to `/api/billing/cron/*` with the shared `CRON_KEY` header automatically.
 
 Smoke test:
 ```bash
@@ -97,11 +108,20 @@ You should get back `{token: "...", user: {...}}`.
 
 ## Step 5 — Build the APK
 
-1. **Edit** `android/app/build.gradle.kts`. Find this line:
-   ```kotlin
-   buildConfigField("String", "API_URL", "\"https://CHANGE-ME.onrender.com\"")
+1. **Point the release build at your Render URL.** Two options:
+
+   **a. Edit `android/local.properties`** (easiest, gitignored, works for Android Studio and CLI):
+   ```properties
+   fieldpharma.release.apiUrl=https://your-service.onrender.com
+   fieldpharma.debug.apiUrl=http://192.168.1.42:4000   # optional: your LAN IP for device testing
    ```
-   Replace `CHANGE-ME.onrender.com` with your actual Render hostname. Keep the quotes and backslashes.
+
+   **b. Export env vars** (handy for CI):
+   ```bash
+   export FIELDPHARMA_RELEASE_API_URL=https://your-service.onrender.com
+   ```
+
+   If you set neither, the release build uses the default `https://fieldpharma-api.onrender.com` — fine if that's your actual service name.
 
 2. **Make sure debug keystore exists.** This is what signs the demo APK. Most Android Studio installs already have it at `~/.android/debug.keystore`. To check:
    ```bash
@@ -140,18 +160,97 @@ You should get back `{token: "...", user: {...}}`.
 
 ---
 
-## Optional — Deploy the admin panel to Vercel
+## Optional — Deploy the marketing / billing site to Vercel
 
-You'll want this to demo to clients without running anything locally.
+Keep this because: public signup, payment pages (Razorpay bounces users back to a URL), and invoice downloads need a web surface. The Android app is the operational tool, but prospects reach you via a website.
 
 1. **https://vercel.com** → sign in with GitHub → **Add New → Project** → import `fieldpharma`
 2. **Root Directory:** click "Edit" → set to `admin`
 3. **Environment Variables:** add `NEXT_PUBLIC_API_URL` = `https://fieldpharma-api.onrender.com`
 4. **Deploy**
 
-You get a URL like `https://fieldpharma-admin.vercel.app`. Login with `admin@baseras.test` / `admin123`.
+You get a URL like `https://fieldpharma-admin.vercel.app`.
 
-After this, **tighten CORS** on Render: change `CORS_ORIGIN` env var from `*` to your Vercel URL. Redeploy will pick it up automatically.
+After this, in the Render dashboard:
+- Change `CORS_ORIGIN` from `*` to your Vercel URL — Android doesn't send Origin headers so this doesn't affect it.
+- Set `APP_URL` to the Vercel URL — Razorpay payment-link callbacks will route back here.
+
+---
+
+## Optional — Enable WhatsApp OTP (MSG91)
+
+Without this, OTPs print to the Render log (visible in **Logs** tab) during dev. For real users:
+
+1. Sign up at **https://control.msg91.com**, verify your business.
+2. **WhatsApp** → **Setup WhatsApp Business API** → connect a phone number. Takes ~24h for Facebook/Meta approval.
+3. **WhatsApp** → **Templates** → create a template:
+   - Name: `fieldpharma_otp`
+   - Language: English
+   - Category: Authentication
+   - Body: `Your FieldPharma verification code is {{1}}. Valid for 10 minutes. Do not share.`
+   - Submit for approval (~1h usually).
+4. Once approved, set these env vars on Render:
+   ```
+   MSG91_WA_AUTH_KEY=<account auth key>
+   MSG91_WA_INTEGRATED_NUMBER=919876543210    # digits only, your approved number
+   MSG91_WA_TEMPLATE_NAME=fieldpharma_otp
+   MSG91_WA_LANGUAGE_CODE=en
+   ```
+5. (Optional) Set up SMS fallback for users without WhatsApp:
+   ```
+   MSG91_AUTH_KEY=...
+   MSG91_SENDER_ID=FLDPHM          # 6-char DLT-approved
+   MSG91_OTP_TEMPLATE_ID=...       # DLT template with ##OTP## variable
+   ```
+
+Redeploy picks these up automatically.
+
+---
+
+## Optional — Enable Razorpay payments
+
+Without this, the admin billing page's "Pay" button opens a stub URL. For real payments:
+
+1. Sign up at **https://dashboard.razorpay.com**, verify KYC.
+2. **Settings → API Keys** → generate Live keys (or Test keys first — recommended).
+3. **Settings → Webhooks** → add a webhook:
+   - URL: `https://fieldpharma-api.onrender.com/api/billing/webhook`
+   - Secret: any long random string (save this)
+   - Active events: `payment_link.paid`, `payment.captured`
+4. Set env vars on Render:
+   ```
+   RAZORPAY_KEY_ID=rzp_live_xxx
+   RAZORPAY_KEY_SECRET=xxx
+   RAZORPAY_WEBHOOK_SECRET=xxx     # the webhook secret from step 3
+   ```
+5. Redeploy. From the admin page, click Upgrade → you get a real Razorpay payment link.
+
+---
+
+## Migration plan — moving admin/manager to Android
+
+The web portal (`admin/`) today has 11 operational screens (users, clients, tour-plans, visits, expenses, samples, rcpa, edetail, hierarchy, expense-policies, dashboard overview). To go Android-only, these need Android equivalents:
+
+| Priority | Admin screen | Android target | Notes |
+|---|---|---|---|
+| P0 | Dashboard overview | New `AdminHomeScreen` | Shows company KPIs instead of rep tiles when `role === ADMIN` |
+| P0 | Users list + new | New `UsersScreen` + `NewUserScreen` | OTP-based invite to new MR phone number |
+| P0 | Tour-plan approvals | New `ApprovalsScreen` with Tour-plan tab | Approve/reject with reason |
+| P0 | Clients list + new-client approvals | Mirror existing `ClientsScreen` + add approval queue | Needs `Client.status` schema change (noted earlier) |
+| P0 | Billing | New `BillingScreen` | Status + Upgrade button → Razorpay in Chrome Custom Tab |
+| P1 | Expense approvals | `ApprovalsScreen` Expenses tab | |
+| P1 | Hierarchy | New `HierarchyScreen` | Read-only tree; invite flow adds nodes |
+| P1 | Expense policies (TA/DA rates) | New `RatesScreen` | |
+| P2 | Samples issuance management | Admin tab in existing `SamplesScreen` | |
+| P2 | E-detailing deck upload | New `DecksScreen` admin mode | Share-sheet from Files app for PDF/images |
+| P2 | RCPA aggregate view | New `RcpaReportsScreen` | |
+
+What stays on web:
+- Public landing page (`/`), sign-up form (`/login` → Create account)
+- Billing/invoice downloads (so a CFO can grab a PDF without the Android app)
+- Terms, Privacy, docs
+
+Sequencing: do all P0 before dropping any web screens. P1 and P2 can follow once mobile adoption is confirmed.
 
 ---
 
@@ -181,6 +280,10 @@ git push
 | APK installs but login fails with network error | API_URL not updated in `build.gradle.kts`, or backend is sleeping. Check `https://your-app.onrender.com/health` in a browser |
 | App says "Cleartext HTTP not permitted" | Your Render URL must use `https://`, not `http://` — check the build.gradle.kts line |
 | Admin can't login (CORS) | `CORS_ORIGIN` on Render must include your admin host. Set to `*` for testing |
+| Signup → "Could not send OTP" | WhatsApp template not approved yet. OTP still prints to Render Logs → use that code to continue. Or set the SMS fallback env vars. |
+| Razorpay webhook 401 (bad signature) | `RAZORPAY_WEBHOOK_SECRET` on Render doesn't match the secret entered in Razorpay dashboard → Webhooks |
+| Billing page says "SUBSCRIPTION_LOCKED" after trial | Expected — trial-lock cron fired. In Render → Logs for `fieldpharma-trial-lock` to confirm. Pay via Razorpay (or set subscription.status back to ACTIVE in Neon SQL for dev). |
+| Cron shows red "No activity" after deploy | Render crons only fire on their schedule, not immediately. For a smoke test, hit the endpoint manually: `curl -X POST -H "x-cron-key: $CRON_KEY" https://your-service.onrender.com/api/billing/cron/trial-lock` |
 
 ---
 

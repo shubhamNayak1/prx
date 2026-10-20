@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
+import OnboardingWizard from './_components/OnboardingWizard';
 
 type Summary = {
   counts: {
@@ -55,6 +56,8 @@ export default function Overview() {
         <h1 className="text-2xl font-semibold">360° Overview</h1>
         <p className="text-slate-500 text-sm">All metrics scoped to your downstream hierarchy.</p>
       </div>
+
+      <OnboardingWizard />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="MRs in scope" value={c.mrTotal} />

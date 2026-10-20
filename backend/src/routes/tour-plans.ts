@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
       : {};
 
   let userFilter: any;
-  if (req.auth!.role === Role.MR) {
+  if (req.auth!.role === Role.FIELD_PERSON) {
     userFilter = { userId: req.auth!.userId };
   } else if (userId) {
     userFilter = { userId };
@@ -85,7 +85,7 @@ router.post('/', async (req, res) => {
 
 // Manager/Admin: approve or reject
 const reviewSchema = z.object({ status: z.enum(['APPROVED', 'REJECTED']) });
-router.patch('/:id/review', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) => {
+router.patch('/:id/review', requireRole(Role.ADMIN, Role.SENIOR_MANAGER, Role.REGIONAL_MANAGER), async (req, res) => {
   const parsed = reviewSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
 

@@ -19,7 +19,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class LoginViewModel(private val auth: AuthRepository) : ViewModel() {
+class LoginViewModel(
+    private val auth: AuthRepository,
+    private val billing: com.baseras.fieldpharma.data.repo.BillingRepository,
+) : ViewModel() {
     private val _state = MutableStateFlow(LoginUiState())
     val state = _state.asStateFlow()
 
@@ -40,8 +43,14 @@ class LoginViewModel(private val auth: AuthRepository) : ViewModel() {
         _state.value = s.copy(loading = true, error = null)
         viewModelScope.launch {
             val res = auth.login(s.email.trim(), s.password)
-            res.onSuccess { onSuccess() }
-                .onFailure { _state.value = _state.value.copy(loading = false, error = it.message ?: "Login failed") }
+            res.onSuccess {
+                // Non-fatal — a billing fetch failure keeps the user on HOME
+                // via the UNKNOWN snapshot; the launch-time effect will try again.
+                runCatching { billing.refresh() }
+                onSuccess()
+            }.onFailure {
+                _state.value = _state.value.copy(loading = false, error = it.message ?: "Login failed")
+            }
         }
     }
 }
@@ -58,7 +67,7 @@ data class LoginUiState(
 fun LoginScreen(onSignedIn: () -> Unit) {
     val app = FieldPharmaApp.instance
     val vm: LoginViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
-        addInitializer(LoginViewModel::class) { LoginViewModel(app.authRepo) }
+        addInitializer(LoginViewModel::class) { LoginViewModel(app.authRepo, app.billingRepo) }
     })
     val state by vm.state.collectAsState()
 

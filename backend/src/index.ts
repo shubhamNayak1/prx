@@ -14,8 +14,14 @@ import sampleRoutes from './routes/samples';
 import edetailRoutes from './routes/edetail';
 import rcpaRoutes from './routes/rcpa';
 import dashboardRoutes from './routes/dashboard';
+import signupRoutes from './routes/signup';
+import billingRoutes from './routes/billing';
 
 const app = express();
+
+// Trust the first proxy hop (Render / nginx / Cloudflare) so req.ip and
+// x-forwarded-for reflect the real client, which the rate limiter keys off.
+app.set('trust proxy', 1);
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
 app.use(express.json({ limit: '5mb' }));
@@ -24,6 +30,8 @@ app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'fieldpharma-api' }));
 
+app.use('/api/signup', signupRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);

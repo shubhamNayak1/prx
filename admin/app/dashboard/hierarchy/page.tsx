@@ -2,15 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { getToken, Role, ROLE_LABEL } from '@/lib/auth';
 
 type Node = {
   id: string;
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'MR';
+  role: Role;
   grade: string | null;
   managerId: string | null;
   children?: Node[];
+};
+
+const ROLE_COLOR: Record<Role, string> = {
+  ADMIN: 'bg-purple-100 text-purple-700',
+  SENIOR_MANAGER: 'bg-indigo-100 text-indigo-700',
+  REGIONAL_MANAGER: 'bg-blue-100 text-blue-700',
+  FIELD_PERSON: 'bg-slate-100 text-slate-700',
 };
 
 function buildTree(users: Node[]): Node[] {
@@ -31,12 +38,8 @@ function TreeNode({ node, depth = 0 }: { node: Node; depth?: number }) {
   return (
     <div className="border-l border-slate-200 pl-4 ml-2">
       <div className="flex items-center gap-2 py-1.5">
-        <span className={`text-xs px-2 py-0.5 rounded ${
-          node.role === 'ADMIN' ? 'bg-purple-100 text-purple-700'
-            : node.role === 'MANAGER' ? 'bg-blue-100 text-blue-700'
-            : 'bg-slate-100 text-slate-700'
-        }`}>
-          {node.role}
+        <span className={`text-xs px-2 py-0.5 rounded ${ROLE_COLOR[node.role]}`}>
+          {ROLE_LABEL[node.role]}
         </span>
         <span className="font-medium">{node.name}</span>
         {node.grade && <span className="text-xs text-slate-500">({node.grade})</span>}

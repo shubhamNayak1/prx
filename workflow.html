@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseras FieldPharma — Workflow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    margin: 0;
+    background: #F8FAFC;
+    color: #0F172A;
+    line-height: 1.55;
+  }
+  header {
+    background: linear-gradient(135deg, #0F766E 0%, #134E4A 100%);
+    color: white;
+    padding: 36px 48px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+  header .subtitle { opacity: 0.9; font-size: 15px; }
+  .brand-tag {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 4px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 48px 80px; }
+  section { margin-top: 40px; }
+  section.hero { margin-top: 0; }
+  h2 {
+    font-size: 22px;
+    color: #0F766E;
+    border-bottom: 2px solid #E2E8F0;
+    padding-bottom: 10px;
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .badge {
+    background: #14B8A6;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  h3 { font-size: 16px; margin: 18px 0 6px; color: #134E4A; }
+  p { margin: 8px 0; }
+  code {
+    background: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Monaco, monospace;
+    font-size: 0.9em;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 12px 0;
+  }
+  th {
+    background: #F1F5F9;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+  }
+  td {
+    padding: 10px 12px;
+    border-top: 1px solid #E2E8F0;
+    font-size: 14px;
+    vertical-align: top;
+  }
+  tr:hover td { background: #F8FAFC; }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pill.admin { background: #FCE7F3; color: #9D174D; }
+  .pill.manager { background: #DBEAFE; color: #1E40AF; }
+  .pill.mr { background: #DCFCE7; color: #166534; }
+  .pill.new { background: #14B8A6; color: white; }
+
+  .mermaid {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 16px 0;
+    text-align: center;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .stat {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 4px solid #0F766E;
+  }
+  .stat .label { font-size: 11px; text-transform: uppercase; color: #64748B; letter-spacing: 0.05em; }
+  .stat .value { font-size: 17px; font-weight: 600; color: #0F766E; margin-top: 4px; }
+  .stat .meta { font-size: 12px; color: #64748B; margin-top: 6px; }
+
+  .callout {
+    background: white;
+    border-left: 4px solid #0F766E;
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .callout.new { border-left-color: #14B8A6; background: #ECFDF5; }
+  .callout.warn { border-left-color: #F59E0B; background: #FEF3C7; }
+  .callout strong { color: #134E4A; }
+  .callout.new strong { color: #047857; }
+  .callout.warn strong { color: #92400E; }
+
+  .creds {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    background: #F1F5F9;
+    padding: 3px 7px;
+    border-radius: 3px;
+  }
+
+  .toc {
+    background: white;
+    padding: 16px 22px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+    margin-bottom: 8px;
+  }
+  .toc strong { color: #0F766E; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .toc ol { margin: 10px 0 0; padding-left: 22px; columns: 2; column-gap: 24px; }
+  .toc li { margin: 4px 0; break-inside: avoid; }
+  .toc a { color: #0F766E; text-decoration: none; font-size: 14px; }
+  .toc a:hover { text-decoration: underline; }
+
+  ul.bullets { margin: 8px 0; padding-left: 22px; }
+  ul.bullets li { margin: 4px 0; }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #0F766E;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+    main { padding: 24px 16px; }
+    header { padding: 24px; }
+    .toc ol { columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Baseras FieldPharma — Workflow</h1>
+  <div class="subtitle">End-to-end: deploy pipeline · real-time sync · geo-stamped actions · cross-role access</div>
+  <span class="brand-tag">v0.1.0 · 2026-05-09</span>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#environment">Live environment</a></li>
+      <li><a href="#deploy-pipeline">Deployment pipeline</a></li>
+      <li><a href="#login-flow">Login & roles</a> <span class="pill new">UPDATED</span></li>
+      <li><a href="#action-flow">User action flow</a> <span class="pill new">NEW</span></li>
+      <li><a href="#sync-flow">Real-time sync</a> <span class="pill new">NEW</span></li>
+      <li><a href="#approval-flow">Cross-app approval</a></li>
+      <li><a href="#location-flow">Geo audit trail</a> <span class="pill new">NEW</span></li>
+      <li><a href="#data-flow">Data shape</a></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ========== 1. ENVIRONMENT ========== -->
+<section id="environment">
+  <h2>1. Live environment</h2>
+  <div class="grid">
+    <div class="stat">
+      <div class="label">Backend API</div>
+      <div class="value">fieldpharma-api.onrender.com</div>
+      <div class="meta">Render free tier · Frankfurt · auto-deploys on git push</div>
+    </div>
+    <div class="stat">
+      <div class="label">Database</div>
+      <div class="value">Neon Postgres · eu-central-1</div>
+      <div class="meta">Schema synced via <code>prisma db push</code></div>
+    </div>
+    <div class="stat">
+      <div class="label">Mobile APK</div>
+      <div class="value">GitHub Actions artifact</div>
+      <div class="meta">Auto-builds on every <code>android/**</code> push · ~6-10 min</div>
+    </div>
+    <div class="stat">
+      <div class="label">Admin panel</div>
+      <div class="value">Local · http://localhost:3000</div>
+      <div class="meta">Vercel-ready (deploy when needed)</div>
+    </div>
+  </div>
+
+  <h3>Login matrix</h3>
+  <table>
+    <tr>
+      <th>Role</th>
+      <th>Email</th>
+      <th>Password</th>
+      <th>Mobile?</th>
+      <th>Web?</th>
+      <th>Sees</th>
+    </tr>
+    <tr><td><span class="pill admin">ADMIN</span></td><td><span class="creds">admin@baseras.test</span></td><td><span class="creds">admin123</span></td><td>✅ <span class="pill new">NEW</span></td><td>✅</td><td>Entire company</td></tr>
+    <tr><td><span class="pill manager">RSM</span></td><td><span class="creds">rsm.north@baseras.test</span></td><td><span class="creds">manager123</span></td><td>✅ <span class="pill new">NEW</span></td><td>✅</td><td>Team (1 ASM + 4 MRs)</td></tr>
+    <tr><td><span class="pill manager">ASM</span></td><td><span class="creds">asm.delhi@baseras.test</span></td><td><span class="creds">manager123</span></td><td>✅ <span class="pill new">NEW</span></td><td>✅</td><td>4 direct-report MRs</td></tr>
+    <tr><td><span class="pill mr">MR</span></td><td><span class="creds">mr.amit@baseras.test</span></td><td><span class="creds">mr123</span></td><td>✅</td><td>❌</td><td>Own data only</td></tr>
+    <tr><td><span class="pill mr">MR</span></td><td><span class="creds">mr.priya@baseras.test</span></td><td><span class="creds">mr123</span></td><td>✅</td><td>❌</td><td>Own data only</td></tr>
+    <tr><td><span class="pill mr">MR</span></td><td><span class="creds">mr.ravi@baseras.test</span></td><td><span class="creds">mr123</span></td><td>✅</td><td>❌</td><td>Own data only</td></tr>
+    <tr><td><span class="pill mr">MR</span></td><td><span class="creds">mr.neha@baseras.test</span></td><td><span class="creds">mr123</span></td><td>✅</td><td>❌</td><td>Own data only</td></tr>
+  </table>
+</section>
+
+<!-- ========== 2. DEPLOY PIPELINE ========== -->
+<section id="deploy-pipeline">
+  <h2>2. Deployment pipeline</h2>
+  <p>Single <code>git push</code> triggers two parallel cloud builds: backend redeploy on Render, and APK build on GitHub Actions.</p>
+  <div class="mermaid">
+flowchart LR
+    Code["💻 Local Mac<br/>VS Code + git"]
+    Code -->|"git push origin main"| GH["🐙 GitHub<br/>shubhamNayak1/prx"]
+
+    GH -->|"on push to backend/**"| Render["🚀 Render<br/>auto-deploy ~3 min"]
+    GH -->|"on push to android/**"| Actions["⚙️ GitHub Actions<br/>build-apk.yml ~8 min"]
+
+    Render -->|"prisma generate<br/>tsc + start"| API["📡 fieldpharma-api.onrender.com"]
+    API <-->|"SQL via Prisma"| Neon[("🐘 Neon Postgres")]
+
+    Actions -->|"signed AAB/APK"| Artifact["📦 fieldpharma-apk.zip"]
+    Artifact -.->|"download via browser"| Phone["📱 Android phone"]
+    Phone <-->|"HTTPS + JWT"| API
+    Web["🌐 Admin browser"] <-->|"HTTPS + JWT"| API
+
+    classDef live fill:#0F766E,stroke:#0F766E,color:#fff
+    classDef neon fill:#22D3EE,stroke:#0891B2,color:#000
+    class API,Render live
+    class Neon neon
+  </div>
+</section>
+
+<!-- ========== 3. LOGIN ========== -->
+<section id="login-flow">
+  <h2>3. Login & role gating <span class="badge">UPDATED</span></h2>
+  <div class="callout new">
+    <strong>What changed:</strong> Mobile app no longer rejects admin/manager logins. Same APK works for everyone — server-side filtering scopes data to each user's hierarchy.
+  </div>
+  <div class="mermaid">
+flowchart TD
+    Open([📱 Open APK]) --> Login["Login screen"]
+    Login --> Submit["Tap Sign in"]
+    Submit -->|"valid creds"| Backend["POST /api/auth/login"]
+    Submit -->|"invalid"| LoginErr["❌ Invalid credentials"]
+    LoginErr --> Login
+
+    Backend -->|"JWT issued"| Role{Role of user}
+    Role -->|ADMIN| HomeAll["🏠 Home — sees<br/>entire company data"]
+    Role -->|MANAGER| HomeTeam["🏠 Home — sees<br/>downstream team"]
+    Role -->|MR| HomeOwn["🏠 Home — sees<br/>own data only"]
+
+    HomeAll --> Tiles["8 feature tiles"]
+    HomeTeam --> Tiles
+    HomeOwn --> Tiles
+
+    classDef ok fill:#0F766E,color:#fff
+    classDef err fill:#FCA5A5,color:#7F1D1D
+    class HomeAll,HomeTeam,HomeOwn ok
+    class LoginErr err
+  </div>
+</section>
+
+<!-- ========== 4. USER ACTION FLOW ========== -->
+<section id="action-flow">
+  <h2>4. User action flow <span class="badge">NEW</span></h2>
+  <p>Every user-initiated write follows the same offline-first pattern. The blue "GPS capture" step is new — every action is now geo-stamped.</p>
+  <div class="mermaid">
+flowchart TD
+    Tap([👆 User taps Submit])
+    Tap --> Geo["📍 Capture GPS"]
+    Geo -->|"got coords"| Local
+    Geo -->|"permission denied"| Local["💾 Save locally<br/>+ coords"]
+
+    Local --> Try["🌐 Try POST to API"]
+    Try -->|"200 OK"| Done["✅ Done — server has it"]
+    Try -->|"network failure"| Queue["📥 Add to pending_sync<br/>+ trigger SyncWorker"]
+
+    Queue --> Wait{Online now?}
+    Wait -->|yes| Drain["Worker drains queue<br/>~1s"]
+    Wait -->|no| Watch["Worker waits<br/>WorkManager NetworkType.CONNECTED"]
+    Watch -->|"network back"| Drain
+    Drain --> Done
+
+    classDef new fill:#14B8A6,color:#fff,stroke:#0F766E
+    classDef ok fill:#0F766E,color:#fff
+    class Geo new
+    class Done ok
+  </div>
+
+  <h3>Which actions are geo-stamped</h3>
+  <table>
+    <tr><th>Action</th><th>DB columns</th><th>What "location" means</th></tr>
+    <tr><td>Punch in / out</td><td><code>punchInLat/Lng</code>, <code>punchOutLat/Lng</code></td><td>Where MR started/ended the day</td></tr>
+    <tr><td>Visit check-in / out</td><td><code>checkInLat/Lng</code>, <code>checkOutLat/Lng</code></td><td>Where the visit happened</td></tr>
+    <tr><td>Expense submit</td><td><code>actionLat/Lng</code> <span class="pill new">NEW</span></td><td>Where MR was when they filed the claim</td></tr>
+    <tr><td>Sample distribute</td><td><code>actionLat/Lng</code> <span class="pill new">NEW</span></td><td>Proves the rep was at the doctor's place</td></tr>
+    <tr><td>RCPA entry</td><td><code>actionLat/Lng</code> <span class="pill new">NEW</span></td><td>Proves the rep was at the chemist</td></tr>
+    <tr><td>Client create</td><td><code>latitude/longitude</code> on <code>Client</code></td><td>Used as the client's pinned coordinates</td></tr>
+  </table>
+</section>
+
+<!-- ========== 5. REAL-TIME SYNC ========== -->
+<section id="sync-flow">
+  <h2>5. Real-time sync <span class="badge">NEW</span></h2>
+  <div class="callout new">
+    <strong>What changed:</strong> Previously sync ran every 15 minutes. Now any queued offline op fires a one-shot WorkRequest with a <code>CONNECTED</code> constraint — runs the moment network is available. Effectively real-time.
+  </div>
+  <div class="mermaid">
+flowchart TD
+    Submit["📥 pending_sync.add()"] --> Trigger["⚡ SyncTrigger.fire()<br/>OneTimeWorkRequest"]
+
+    Trigger --> Online{Network available?}
+    Online -->|yes| Run["🏃 Worker runs immediately"]
+    Online -->|no| WaitQueue["⏳ Queued by WorkManager"]
+    WaitQueue -->|"network back"| Run
+
+    Run --> Drain{For each pending item}
+    Drain -->|"PUNCH_IN/OUT"| ApiAtt["POST /api/attendance/punch-*"]
+    Drain -->|"VISIT (separate path)"| ApiVis["POST /api/visits"]
+    Drain -->|"EXPENSE + photo upload"| ApiExp["POST /api/uploads → /api/expenses"]
+    Drain -->|"SAMPLE_DIST"| ApiSam["POST /api/samples/distributions"]
+    Drain -->|"EDETAIL_VIEW"| ApiEdt["POST /api/edetail/views"]
+    Drain -->|"RCPA"| ApiRcp["POST /api/rcpa"]
+
+    ApiAtt --> Success["✅ Delete row from queue"]
+    ApiVis --> Success
+    ApiExp --> Success
+    ApiSam --> Success
+    ApiEdt --> Success
+    ApiRcp --> Success
+
+    ApiAtt -->|"fail"| Retry["⚠️ bumpAttempts + retry"]
+    ApiVis -->|"fail"| Retry
+    ApiExp -->|"fail"| Retry
+    ApiSam -->|"fail"| Retry
+    ApiEdt -->|"fail"| Retry
+    ApiRcp -->|"fail"| Retry
+
+    classDef trigger fill:#14B8A6,color:#fff
+    classDef ok fill:#0F766E,color:#fff
+    classDef warn fill:#FBBF24,color:#7C2D12
+    class Trigger trigger
+    class Success ok
+    class Retry warn
+  </div>
+
+  <h3>Old vs new latency</h3>
+  <table>
+    <tr><th>Scenario</th><th>Before</th><th>After</th></tr>
+    <tr><td>Online — submit succeeds</td><td>Instant</td><td>Instant</td></tr>
+    <tr><td>Online — server hiccup, retry needed</td><td>Up to 15 min</td><td>~1-2 sec</td></tr>
+    <tr><td>Submit while offline → reconnect</td><td>Up to 15 min after network back</td><td>~1 sec after network back</td></tr>
+    <tr><td>5 ops queued in burst, then reconnect</td><td>One drain per 15 min</td><td>Single drain on reconnect</td></tr>
+  </table>
+</section>
+
+<!-- ========== 6. CROSS-APP APPROVAL ========== -->
+<section id="approval-flow">
+  <h2>6. Cross-app approval workflow</h2>
+  <p>How an expense (or tour plan) flows from MR submission to admin approval and back to MR's view.</p>
+  <div class="mermaid">
+flowchart LR
+    MRSubmit["📱 MR submits expense<br/>(geo-stamped)"]
+    MRSubmit --> Sync["⚡ Real-time sync"]
+    Sync --> DB[("🐘 Neon Postgres<br/>status: PENDING")]
+
+    DB -->|"on next admin page load"| AdminList["💻 Admin panel<br/>Expenses page"]
+    AdminList --> Review["👤 Admin reviews<br/>+ taps Approve"]
+    Review -->|"PATCH /api/expenses/:id/review"| DB2[("🐘 status: APPROVED<br/>approvedBy: admin.id")]
+
+    DB2 -->|"on MR's next refresh"| MRSee["📱 MR sees<br/>green Approved chip"]
+
+    classDef ok fill:#0F766E,color:#fff
+    classDef db fill:#22D3EE,color:#000
+    class MRSee,DB2 ok
+    class DB,DB2 db
+  </div>
+  <div class="callout warn">
+    <strong>Currently a polling system:</strong> MR sees the approved status only on next manual refresh. True push notifications (admin → MR's phone) is a future enhancement (FCM).
+  </div>
+</section>
+
+<!-- ========== 7. LOCATION FLOW ========== -->
+<section id="location-flow">
+  <h2>7. Geo audit trail <span class="badge">NEW</span></h2>
+  <p>How GPS gets captured even when the user is offline, and how it gets persisted with the action through the sync queue.</p>
+  <div class="mermaid">
+flowchart TD
+    Action([User taps action]) --> CheckPerm{Camera/Location<br/>permission?}
+    CheckPerm -->|granted| Fused["📍 FusedLocationProvider<br/>BALANCED accuracy"]
+    CheckPerm -->|denied| Null["lat/lng = null<br/>(action still records)"]
+
+    Fused -->|"~1 sec"| Coords["{ lat, lng }"]
+    Coords --> Inject["Coords injected into<br/>request DTO"]
+    Null --> Inject
+
+    Inject --> TrySend["POST to /api/..."]
+    TrySend -->|"online"| ServerSave["DB stores<br/>actionLat/actionLng"]
+    TrySend -->|"offline"| QueueSave["pending_sync row<br/>contains DTO + coords"]
+
+    QueueSave -->|"network returns"| Drain["SyncWorker reads<br/>queued DTO"]
+    Drain --> ServerSave
+
+    classDef new fill:#14B8A6,color:#fff
+    classDef ok fill:#0F766E,color:#fff
+    class Fused,Inject new
+    class ServerSave ok
+  </div>
+  <div class="callout">
+    <strong>Why it matters for the audit:</strong> Coords are captured at the <em>moment of the action</em> and travel with the queued payload — so a sample distribution recorded at Dr. X's clinic at 11am still shows the clinic's coordinates even if it actually syncs at 4pm from a different location.
+  </div>
+</section>
+
+<!-- ========== 8. DATA SHAPE ========== -->
+<section id="data-flow">
+  <h2>8. Data shape — request → DB</h2>
+  <table>
+    <tr><th>Endpoint</th><th>Method</th><th>Body fields</th><th>Stored in</th></tr>
+    <tr><td><code>/api/auth/login</code></td><td>POST</td><td>email, password</td><td>JWT issued; no DB write</td></tr>
+    <tr><td><code>/api/attendance/punch-in</code></td><td>POST</td><td>date, at, lat, lng, photo</td><td>Attendance row</td></tr>
+    <tr><td><code>/api/visits</code></td><td>POST</td><td>clientId, checkInAt, checkInLat/Lng, checkOutAt, checkOutLat/Lng, notes, productsDiscussed</td><td>Visit row</td></tr>
+    <tr><td><code>/api/expenses</code></td><td>POST</td><td>type, amount, fromLocation, distanceKm, billPhoto, <strong>actionLat, actionLng</strong></td><td>Expense row · status=PENDING</td></tr>
+    <tr><td><code>/api/samples/distributions</code></td><td>POST</td><td>sampleIssueId, quantity, <strong>actionLat, actionLng</strong></td><td>SampleDistribution row</td></tr>
+    <tr><td><code>/api/rcpa</code></td><td>POST</td><td>clientId, ourBrand, ourQuantity, competitorBrand, competitorQuantity, <strong>actionLat, actionLng</strong></td><td>RcpaEntry row</td></tr>
+    <tr><td><code>/api/clients</code></td><td>POST</td><td>name, type, latitude, longitude, …</td><td>Client row</td></tr>
+    <tr><td><code>/api/uploads</code></td><td>POST</td><td>multipart file</td><td>Render disk → URL returned</td></tr>
+    <tr><td><code>/api/expenses/:id/review</code></td><td>PATCH</td><td>status: APPROVED ∣ REJECTED</td><td>Expense.status</td></tr>
+    <tr><td><code>/api/dashboard/summary</code></td><td>GET</td><td>—</td><td>Aggregations across hierarchy</td></tr>
+  </table>
+</section>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#0F766E',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#134E4A',
+      lineColor: '#475569',
+      secondaryColor: '#14B8A6',
+      tertiaryColor: '#F1F5F9',
+      fontSize: '14px',
+    },
+    flowchart: { curve: 'basis', padding: 20, useMaxWidth: true },
+  });
+</script>
+</body>
+</html>

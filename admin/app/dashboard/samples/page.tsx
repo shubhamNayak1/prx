@@ -38,7 +38,7 @@ export default function SamplesPage() {
     ]);
     setProducts(p.products);
     setIssues(i.issues);
-    setUsers(u.users.filter((x) => x.role === 'MR'));
+    setUsers(u.users.filter((x) => x.role === 'FIELD_PERSON'));
     setLoading(false);
   }
 

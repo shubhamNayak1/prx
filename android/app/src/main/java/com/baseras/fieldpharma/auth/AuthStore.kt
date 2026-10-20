@@ -37,7 +37,7 @@ class AuthStore(context: Context) {
                 id = id,
                 email = prefs.getString(KEY_EMAIL, "")!!,
                 name = prefs.getString(KEY_NAME, "")!!,
-                role = prefs.getString(KEY_ROLE, "MR")!!,
+                role = prefs.getString(KEY_ROLE, "FIELD_PERSON")!!,
             )
         }
         set(value) {

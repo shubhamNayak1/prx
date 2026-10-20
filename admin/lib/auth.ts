@@ -3,11 +3,24 @@
 const TOKEN_KEY = 'fp_token';
 const USER_KEY = 'fp_user';
 
+export type Role = 'ADMIN' | 'SENIOR_MANAGER' | 'REGIONAL_MANAGER' | 'FIELD_PERSON';
+
+export const MANAGER_ROLES: Role[] = ['SENIOR_MANAGER', 'REGIONAL_MANAGER'];
+export const BILLABLE_ROLES: Role[] = [...MANAGER_ROLES, 'FIELD_PERSON'];
+export const APPROVER_ROLES: Role[] = ['ADMIN', ...MANAGER_ROLES];
+
+export const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: 'Admin',
+  SENIOR_MANAGER: 'Senior Manager',
+  REGIONAL_MANAGER: 'Regional Manager',
+  FIELD_PERSON: 'Field Person',
+};
+
 export type AuthUser = {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'MR';
+  role: Role;
   companyId: string;
 };
 

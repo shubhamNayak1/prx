@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,23 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
+
+// Developer-local overrides. Create android/local.properties with any of:
+//   fieldpharma.debug.apiUrl=http://192.168.1.42:4000
+//   fieldpharma.release.apiUrl=https://api.fieldpharma.com
+// These win over the hard-coded defaults below. local.properties is gitignored.
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val debugApiUrlDefault = "http://10.0.2.2:4000"
+val releaseApiUrlDefault = "https://fieldpharma-api.onrender.com"
+val debugApiUrl: String = (localProps.getProperty("fieldpharma.debug.apiUrl")
+    ?: System.getenv("FIELDPHARMA_DEBUG_API_URL")
+    ?: debugApiUrlDefault)
+val releaseApiUrl: String = (localProps.getProperty("fieldpharma.release.apiUrl")
+    ?: System.getenv("FIELDPHARMA_RELEASE_API_URL")
+    ?: releaseApiUrlDefault)
 
 android {
     namespace = "com.baseras.fieldpharma"
@@ -46,15 +65,16 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            // Local backend via emulator-loopback. For LAN device dev, override with
-            // your machine IP (e.g. http://192.168.1.42:4000)
-            buildConfigField("String", "API_URL", "\"http://10.0.2.2:4000\"")
+            // Default = emulator-loopback (10.0.2.2 reaches the host's localhost).
+            // Override per-machine via local.properties: fieldpharma.debug.apiUrl=...
+            buildConfigField("String", "API_URL", "\"$debugApiUrl\"")
         }
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("demo")
-            // Render-deployed backend (HTTPS required for release builds).
-            buildConfigField("String", "API_URL", "\"https://fieldpharma-api.onrender.com\"")
+            // HTTPS required for release builds (cleartext traffic blocked by default
+            // from Android 9+). Override via local.properties: fieldpharma.release.apiUrl=...
+            buildConfigField("String", "API_URL", "\"$releaseApiUrl\"")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

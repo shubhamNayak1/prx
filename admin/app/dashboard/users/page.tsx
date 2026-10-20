@@ -3,23 +3,25 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { getToken, Role, ROLE_LABEL } from '@/lib/auth';
 
 type User = {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'MANAGER' | 'MR';
+  role: Role;
   grade: string | null;
   employeeCode: string | null;
   isActive: boolean;
   manager: { id: string; name: string } | null;
 };
 
+type Filter = 'ALL' | Role;
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'ALL' | 'ADMIN' | 'MANAGER' | 'MR'>('ALL');
+  const [filter, setFilter] = useState<Filter>('ALL');
 
   async function reload() {
     setLoading(true);
@@ -52,8 +54,8 @@ export default function UsersPage() {
         </Link>
       </div>
 
-      <div className="flex gap-2">
-        {(['ALL', 'ADMIN', 'MANAGER', 'MR'] as const).map((f) => (
+      <div className="flex gap-2 flex-wrap">
+        {(['ALL', 'ADMIN', 'SENIOR_MANAGER', 'REGIONAL_MANAGER', 'FIELD_PERSON'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -61,7 +63,7 @@ export default function UsersPage() {
               filter === f ? 'bg-brand text-white' : 'bg-white border border-slate-200 text-slate-700'
             }`}
           >
-            {f}
+            {f === 'ALL' ? 'All' : ROLE_LABEL[f]}
           </button>
         ))}
       </div>
@@ -93,7 +95,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{u.email}</td>
                   <td className="px-4 py-3">
-                    <span className="text-xs px-2 py-1 rounded bg-slate-100">{u.role}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-slate-100">{ROLE_LABEL[u.role]}</span>
                   </td>
                   <td className="px-4 py-3">{u.grade || '—'}</td>
                   <td className="px-4 py-3">{u.manager?.name || '—'}</td>

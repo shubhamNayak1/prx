@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { enforceTrialRepCap } from '../middleware/subscription';
+import { canReportTo } from '../lib/roles';
 
 const router = Router();
 
@@ -57,7 +59,7 @@ const createUserSchema = z.object({
   managerId: z.string().optional().nullable(),
 });
 
-router.post('/', requireRole(Role.ADMIN), async (req, res) => {
+router.post('/', requireRole(Role.ADMIN), enforceTrialRepCap, async (req, res) => {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
@@ -69,7 +71,15 @@ router.post('/', requireRole(Role.ADMIN), async (req, res) => {
       where: { id: data.managerId, companyId: req.auth!.companyId },
     });
     if (!mgr) return res.status(400).json({ error: 'Manager not found in your company' });
-    if (mgr.role === Role.MR) return res.status(400).json({ error: 'Cannot report to an MR' });
+    if (!canReportTo(data.role, mgr.role)) {
+      return res.status(400).json({
+        error: 'INVALID_HIERARCHY',
+        message: `A ${data.role} cannot report to a ${mgr.role}`,
+      });
+    }
+  } else if (data.role !== Role.ADMIN) {
+    // Only admins may have no manager. Everyone else needs a parent in the tree.
+    return res.status(400).json({ error: 'INVALID_HIERARCHY', message: 'Non-admins must have a manager' });
   }
 
   const existing = await prisma.user.findUnique({ where: { email: data.email } });

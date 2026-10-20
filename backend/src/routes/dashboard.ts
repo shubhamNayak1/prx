@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Role, ExpenseStatus, TourPlanStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { requireAuth } from '../middleware/auth';
+import { isManager } from '../lib/roles';
 
 const router = Router();
 router.use(requireAuth);
@@ -14,9 +15,11 @@ router.get('/summary', async (req, res) => {
     select: { id: true, managerId: true, role: true },
   });
   const ids = new Set<string>();
-  if (req.auth!.role === Role.MR) {
+  if (req.auth!.role === Role.FIELD_PERSON) {
     ids.add(req.auth!.userId);
-  } else if (req.auth!.role === Role.MANAGER) {
+  } else if (isManager(req.auth!.role)) {
+    // Walks the full descendant tree — Senior Manager picks up both
+    // Regional Managers and their Field Persons automatically.
     const collect = (m: string) => {
       for (const u of all) if (u.managerId === m) { ids.add(u.id); collect(u.id); }
     };
@@ -26,7 +29,7 @@ router.get('/summary', async (req, res) => {
     for (const u of all) ids.add(u.id);
   }
   const idList = Array.from(ids);
-  const mrIds = all.filter((u) => u.role === Role.MR && idList.includes(u.id)).map((u) => u.id);
+  const mrIds = all.filter((u) => u.role === Role.FIELD_PERSON && idList.includes(u.id)).map((u) => u.id);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -94,8 +97,8 @@ router.get('/visits-trend', async (req, res) => {
     select: { id: true, managerId: true, role: true },
   });
   const ids = new Set<string>();
-  if (req.auth!.role === Role.MR) ids.add(req.auth!.userId);
-  else if (req.auth!.role === Role.MANAGER) {
+  if (req.auth!.role === Role.FIELD_PERSON) ids.add(req.auth!.userId);
+  else if (isManager(req.auth!.role)) {
     const collect = (m: string) => {
       for (const u of all) if (u.managerId === m) { ids.add(u.id); collect(u.id); }
     };

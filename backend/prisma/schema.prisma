@@ -13,21 +13,111 @@ datasource db {
 // ───────────────────────── Tenancy & users ─────────────────────────
 
 model Company {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String
+  gstin         String?
+  billingEmail  String?
+  billingPhone  String?
+  createdAt     DateTime @default(now())
 
   users          User[]
   clients        Client[]
   sampleProducts SampleProduct[]
   edetailDecks   EdetailDeck[]
   expensePolicies ExpensePolicy[]
+  subscription   Subscription?
+}
+
+// ───────────────────────── OTP challenges (phone verification) ─────────────────────────
+
+enum OtpPurpose {
+  SIGNUP
+}
+
+model OtpChallenge {
+  id         String     @id @default(cuid())
+  phone      String
+  purpose    OtpPurpose
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int        @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose, createdAt])
+}
+
+// ───────────────────────── Billing & subscriptions ─────────────────────────
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum SubStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  LOCKED
+  CANCELLED
+}
+
+enum InvStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+model Subscription {
+  id                 String        @id @default(cuid())
+  companyId          String        @unique
+  company            Company       @relation(fields: [companyId], references: [id])
+  status             SubStatus
+  cycle              BillingCycle?
+  pricePerRepPaise   Int           @default(49900) // ₹499
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  lockedAt           DateTime?
+  cancelAtPeriodEnd  Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  invoices Invoice[]
+}
+
+model Invoice {
+  id               String       @id @default(cuid())
+  subscriptionId   String
+  subscription     Subscription @relation(fields: [subscriptionId], references: [id])
+  number           String       @unique
+  periodStart      DateTime
+  periodEnd        DateTime
+  cycle            BillingCycle
+  activeRepCount   Int
+  pricePerRepPaise Int
+  discountPct      Int
+  subtotalPaise    Int
+  gstPaise         Int
+  totalPaise       Int
+  status           InvStatus    @default(DRAFT)
+  dueAt            DateTime
+  paidAt           DateTime?
+  gatewayRef       String?
+  pdfUrl           String?
+  createdAt        DateTime     @default(now())
+
+  @@index([subscriptionId, status])
 }
 
 enum Role {
-  ADMIN   // Full access — Baseras / company HQ
-  MANAGER // Field manager — sees their downstream hierarchy
-  MR      // Medical Representative — field user
+  ADMIN            // Company HQ: users, billing, master data
+  SENIOR_MANAGER   // Sees combined report of their Regional Managers
+  REGIONAL_MANAGER // Sees combined report of their Field Persons
+  FIELD_PERSON     // Goes on field; the operational user of the Android app
 }
 
 model User {

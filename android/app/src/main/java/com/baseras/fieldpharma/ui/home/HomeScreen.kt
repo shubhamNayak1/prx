@@ -44,6 +44,7 @@ fun HomeScreen(
     val app = FieldPharmaApp.instance
     val user = app.authRepo.current
     val pendingCount by app.attendanceRepo.observePendingCount().collectAsState(initial = 0)
+    val billing by app.billingStore.state.collectAsState()
 
     val tiles = listOf(
         TileSpec(Icons.Default.AccessTime, "Attendance", "Punch in / out + selfie", onAttendance),
@@ -77,6 +78,35 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            billing.trialDaysLeft?.let { days ->
+                item {
+                    val urgent = days <= 2
+                    ElevatedCard(
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = if (urgent)
+                                MaterialTheme.colorScheme.errorContainer
+                            else
+                                MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (days == 0) "Trial ends today" else "Trial: $days day${if (days == 1) "" else "s"} left",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    "Ask your admin to subscribe from the web dashboard.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             if (pendingCount > 0) {
                 item {
                     ElevatedCard {

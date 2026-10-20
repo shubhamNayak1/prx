@@ -57,7 +57,7 @@ router.get('/', async (req, res) => {
   if (from && to) where.date = { gte: new Date(from), lte: new Date(to) };
   if (status) where.status = status;
 
-  if (req.auth!.role === Role.MR) {
+  if (req.auth!.role === Role.FIELD_PERSON) {
     where.userId = req.auth!.userId;
   } else if (userId) {
     where.userId = userId;
@@ -89,7 +89,7 @@ const reviewSchema = z.object({
   remarks: z.string().optional(),
 });
 
-router.patch('/:id/review', requireRole(Role.ADMIN, Role.MANAGER), async (req, res) => {
+router.patch('/:id/review', requireRole(Role.ADMIN, Role.SENIOR_MANAGER, Role.REGIONAL_MANAGER), async (req, res) => {
   const parsed = reviewSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
 
