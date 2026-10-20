@@ -9,14 +9,27 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AttendanceDao {
-    @Query("SELECT * FROM attendance WHERE date = :date LIMIT 1")
-    suspend fun get(date: String): AttendanceEntity?
+    /** All sessions for `date`, oldest first — a day may have several. */
+    @Query("SELECT * FROM attendance WHERE date = :date ORDER BY punchInAt ASC")
+    suspend fun forDate(date: String): List<AttendanceEntity>
 
-    @Query("SELECT * FROM attendance WHERE date = :date LIMIT 1")
-    fun observe(date: String): Flow<AttendanceEntity?>
+    @Query("SELECT * FROM attendance WHERE date = :date ORDER BY punchInAt ASC")
+    fun observeForDate(date: String): Flow<List<AttendanceEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(record: AttendanceEntity)
+    /** Latest open session (no punch-out) for `date`, or null. */
+    @Query("""
+        SELECT * FROM attendance
+        WHERE date = :date AND punchOutAt IS NULL
+        ORDER BY punchInAt DESC
+        LIMIT 1
+    """)
+    suspend fun openSession(date: String): AttendanceEntity?
+
+    @Insert
+    suspend fun insert(record: AttendanceEntity): Long
+
+    @Update
+    suspend fun update(record: AttendanceEntity)
 }
 
 @Dao

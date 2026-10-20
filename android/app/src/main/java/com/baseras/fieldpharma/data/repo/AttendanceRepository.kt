@@ -23,68 +23,71 @@ class AttendanceRepository(
 ) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
-    fun observeToday(): Flow<AttendanceEntity?> = attendanceDao.observe(today())
+    /** All of today's sessions, oldest first. */
+    fun observeTodaySessions(): Flow<List<AttendanceEntity>> =
+        attendanceDao.observeForDate(today())
+
     fun observePendingCount(): Flow<Int> = pendingDao.observeCount()
 
+    /** Starts a new session unless one is already open. */
     suspend fun punchIn(lat: Double?, lng: Double?, photoFile: File?) {
         val date = today()
         val nowIso = Instant.now().toString()
-        val current = attendanceDao.get(date)
 
-        // 1. Save locally first (offline-first)
-        val updated = (current ?: AttendanceEntity(date)).copy(
+        if (attendanceDao.openSession(date) != null) return // already punched in
+
+        val row = AttendanceEntity(
+            date = date,
             punchInAt = nowIso,
             punchInLat = lat,
             punchInLng = lng,
             punchInPhotoPath = photoFile?.absolutePath,
             syncedAt = null,
         )
-        attendanceDao.upsert(updated)
+        val localId = attendanceDao.insert(row)
 
-        // 2. Try remote: upload photo if any, then POST
         try {
             val photoUrl = photoFile?.let { UploadHelper.uploadImage(api, it) }
             api.punchIn(PunchReq(date, nowIso, lat, lng, photoUrl))
-            attendanceDao.upsert(updated.copy(
+            attendanceDao.update(row.copy(
+                localId = localId,
                 punchInPhotoUrl = photoUrl,
                 punchInPhotoPath = null,
                 syncedAt = System.currentTimeMillis(),
             ))
             photoFile?.delete()
         } catch (t: Throwable) {
-            // Queue for sync
-            pendingDao.add(
-                PendingSyncEntity(
-                    type = "PUNCH_IN",
-                    payloadJson = json.encodeToString(PunchReq(date, nowIso, lat, lng, null)),
-                    localPhotoPath = photoFile?.absolutePath,
-                )
-            )
+            pendingDao.add(PendingSyncEntity(
+                type = "PUNCH_IN",
+                payloadJson = json.encodeToString(PunchReq(date, nowIso, lat, lng, null)),
+                localPhotoPath = photoFile?.absolutePath,
+            ))
             SyncTrigger.fire()
         }
     }
 
+    /** Closes the latest open session. No-op if nothing is open. */
     suspend fun punchOut(lat: Double?, lng: Double?) {
         val date = today()
         val nowIso = Instant.now().toString()
-        val current = attendanceDao.get(date)
-        val updated = (current ?: AttendanceEntity(date)).copy(
+        val open = attendanceDao.openSession(date) ?: return
+
+        val closed = open.copy(
             punchOutAt = nowIso,
             punchOutLat = lat,
             punchOutLng = lng,
             syncedAt = null,
         )
-        attendanceDao.upsert(updated)
+        attendanceDao.update(closed)
+
         try {
             api.punchOut(PunchReq(date, nowIso, lat, lng))
-            attendanceDao.upsert(updated.copy(syncedAt = System.currentTimeMillis()))
+            attendanceDao.update(closed.copy(syncedAt = System.currentTimeMillis()))
         } catch (t: Throwable) {
-            pendingDao.add(
-                PendingSyncEntity(
-                    type = "PUNCH_OUT",
-                    payloadJson = json.encodeToString(PunchReq(date, nowIso, lat, lng)),
-                )
-            )
+            pendingDao.add(PendingSyncEntity(
+                type = "PUNCH_OUT",
+                payloadJson = json.encodeToString(PunchReq(date, nowIso, lat, lng)),
+            ))
             SyncTrigger.fire()
         }
     }

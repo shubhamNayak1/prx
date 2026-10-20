@@ -7,10 +7,14 @@ import androidx.room.PrimaryKey
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Entity(tableName = "attendance")
+@Entity(
+    tableName = "attendance",
+    indices = [androidx.room.Index(value = ["date"])],
+)
 data class AttendanceEntity(
-    @PrimaryKey val date: String,
-    val punchInAt: String? = null,
+    @PrimaryKey(autoGenerate = true) val localId: Long = 0,
+    val date: String,                      // YYYY-MM-DD
+    val punchInAt: String,                 // ISO instant (always set — row = one session)
     val punchInLat: Double? = null,
     val punchInLng: Double? = null,
     val punchInPhotoPath: String? = null,

@@ -25,7 +25,7 @@ interface Api {
     suspend fun punchOut(@Body req: PunchReq): AttendanceRes
 
     @GET("/api/attendance/today")
-    suspend fun todayAttendance(): AttendanceRes
+    suspend fun todayAttendance(): AttendanceSessionsRes
 
     @Multipart
     @POST("/api/uploads")
@@ -249,11 +249,12 @@ data class PunchReq(
 )
 
 @Serializable data class AttendanceRes(val attendance: AttendanceDto?)
+@Serializable data class AttendanceSessionsRes(val sessions: List<AttendanceDto> = emptyList())
 
 @Serializable
 data class AttendanceDto(
     val id: String, val userId: String, val date: String,
-    val punchInAt: String? = null,
+    val punchInAt: String,
     val punchInLat: Double? = null, val punchInLng: Double? = null,
     val punchOutAt: String? = null,
     val punchOutLat: Double? = null, val punchOutLng: Double? = null,

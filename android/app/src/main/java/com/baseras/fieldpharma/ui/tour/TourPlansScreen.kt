@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -77,8 +78,12 @@ fun TourPlansScreen(onBack: () -> Unit) {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
             }
             if (plans.isEmpty() && !loading) {
-                Box(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-                    Text("No upcoming plans. Plans created in the admin panel or via Phase 3.1 mobile flow appear here.")
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "No Upcoming Plans",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {

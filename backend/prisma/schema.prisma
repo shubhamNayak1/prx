@@ -185,19 +185,23 @@ model Client {
 // ───────────────────────── Attendance ─────────────────────────
 
 model Attendance {
+  // Each row is ONE punch-in / punch-out session. Multiple sessions per
+  // user per day are allowed — a rep who accidentally punches out can
+  // punch back in and we track every pair with its own hours.
   id           String    @id @default(cuid())
   userId       String
   user         User      @relation(fields: [userId], references: [id])
   date         DateTime  @db.Date
-  punchInAt    DateTime?
+  punchInAt    DateTime
   punchInLat   Float?
   punchInLng   Float?
   punchInPhoto String?
   punchOutAt   DateTime?
   punchOutLat  Float?
   punchOutLng  Float?
+  createdAt    DateTime  @default(now())
 
-  @@unique([userId, date])
+  @@index([userId, date])
 }
 
 // ───────────────────────── Tour planning ─────────────────────────

@@ -45,8 +45,8 @@ import java.time.format.DateTimeFormatter
 class FieldHomeViewModel(
     private val app: FieldPharmaApp,
 ) : ViewModel() {
-    val today = app.attendanceRepo.observeToday()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val sessions = app.attendanceRepo.observeTodaySessions()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val pendingSync = app.attendanceRepo.observePendingCount()
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
@@ -121,7 +121,7 @@ fun HomeScreen(
     val vm: FieldHomeViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
         addInitializer(FieldHomeViewModel::class) { FieldHomeViewModel(app) }
     })
-    val today by vm.today.collectAsState()
+    val sessions by vm.sessions.collectAsState()
     val pendingCount by vm.pendingSync.collectAsState()
     val plan by vm.plan.collectAsState()
     val loadingPlan by vm.loadingPlan.collectAsState()
@@ -141,7 +141,7 @@ fun HomeScreen(
         }
     }
 
-    val attendance = attendanceState(today)
+    val attendance = attendanceStateFromSessions(sessions)
     val punchedIn = attendance is AttendanceState.PunchedIn
 
     val stops = buildStops(plan, punchedIn)
@@ -192,7 +192,7 @@ fun HomeScreen(
 
     if (showPunchDialog) {
         PunchDialog(
-            attendance = today,
+            sessions = sessions,
             busy = busy,
             onPunchIn = { vm.punchIn() },
             onPunchOut = { vm.punchOut() },
@@ -281,9 +281,19 @@ private fun HomeScaffold(
             }
 
             item {
+                val attendanceLabel = when (state.attendance) {
+                    is AttendanceState.PunchedIn -> "Punch out"
+                    is AttendanceState.PunchedOut -> "Punch in again"
+                    else -> "Punch in"
+                }
+                val attendanceIcon = when (state.attendance) {
+                    is AttendanceState.PunchedIn -> Icons.AutoMirrored.Filled.Logout
+                    is AttendanceState.PunchedOut -> Icons.Default.Replay
+                    else -> Icons.Default.PlayArrow
+                }
                 QuickActionsRow(
                     actions = listOf(
-                        QuickAction("Attendance", Icons.Default.AccessTime, onAttendanceClick),
+                        QuickAction(attendanceLabel, attendanceIcon, onAttendanceClick),
                         QuickAction("Add client", Icons.Default.PersonAdd, onClients),
                         QuickAction("Samples", Icons.Default.CardGiftcard, onSamples),
                         QuickAction("Expense", Icons.Default.Receipt, onExpenses),
@@ -473,12 +483,12 @@ private fun PendingSyncCard(count: Int) {
 
 /* ─────────────── Helpers ─────────────── */
 
-/** Derives UI AttendanceState from the local Room row. */
-internal fun attendanceState(a: AttendanceEntity?): AttendanceState {
-    if (a?.punchInAt == null) return AttendanceState.NotPunched
+/** Derives UI AttendanceState from the day's session list (oldest first). */
+internal fun attendanceStateFromSessions(sessions: List<AttendanceEntity>): AttendanceState {
+    val latest = sessions.lastOrNull() ?: return AttendanceState.NotPunched
     val fmt = DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
-    val inTime = runCatching { fmt.format(Instant.parse(a.punchInAt)) }.getOrNull() ?: "—"
-    val outIso = a.punchOutAt
+    val inTime = runCatching { fmt.format(Instant.parse(latest.punchInAt)) }.getOrNull() ?: "—"
+    val outIso = latest.punchOutAt
     return if (outIso != null) {
         val outTime = runCatching { fmt.format(Instant.parse(outIso)) }.getOrNull() ?: "—"
         AttendanceState.PunchedOut(outTime)

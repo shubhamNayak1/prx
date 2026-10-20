@@ -43,9 +43,11 @@ router.get('/summary', async (req, res) => {
     monthExpenses,
     pendingPlans,
   ] = await Promise.all([
-    prisma.attendance.count({
-      where: { userId: { in: mrIds }, date: today, punchInAt: { not: null } },
-    }),
+    prisma.attendance.findMany({
+      where: { userId: { in: mrIds }, date: today },
+      select: { userId: true },
+      distinct: ['userId'],
+    }).then((r) => r.length),
     prisma.visit.count({
       where: { userId: { in: idList }, checkInAt: { gte: monthStart, lt: monthEnd } },
     }),
@@ -194,9 +196,12 @@ router.get('/role-summary', async (req, res) => {
     monthExpAgg,
     pendingPlans,
   ] = await Promise.all([
-    prisma.attendance.count({
-      where: { userId: { in: fieldPersonIds }, date: today, punchInAt: { not: null } },
-    }),
+    // distinct users who have at least one punch-in today
+    prisma.attendance.findMany({
+      where: { userId: { in: fieldPersonIds }, date: today },
+      select: { userId: true },
+      distinct: ['userId'],
+    }).then((rows) => rows.length),
     prisma.visit.count({
       where: { userId: { in: idList }, checkInAt: { gte: today, lt: tomorrow } },
     }),
@@ -301,7 +306,11 @@ async function rollup(
 
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
   const [activeToday, callsToday, callsPlanned, mv, mp, flaggedCount] = await Promise.all([
-    prisma.attendance.count({ where: { userId: { in: subFieldIds }, date: today, punchInAt: { not: null } } }),
+    prisma.attendance.findMany({
+      where: { userId: { in: subFieldIds }, date: today },
+      select: { userId: true },
+      distinct: ['userId'],
+    }).then((r) => r.length),
     prisma.visit.count({ where: { userId: { in: Array.from(sub) }, checkInAt: { gte: today, lt: tomorrow } } }),
     prisma.tourPlanEntry.count({ where: { tourPlan: { userId: { in: Array.from(sub) }, date: today, status: { in: [TourPlanStatus.APPROVED, TourPlanStatus.COMPLETED, TourPlanStatus.PLANNED] } } } }),
     prisma.visit.count({ where: { userId: { in: Array.from(sub) }, checkInAt: { gte: monthStart, lt: monthEnd } } }),
