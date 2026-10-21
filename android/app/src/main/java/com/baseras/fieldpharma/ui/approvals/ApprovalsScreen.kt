@@ -23,8 +23,10 @@ import com.baseras.fieldpharma.FieldPharmaApp
 import com.baseras.fieldpharma.data.remote.Api
 import com.baseras.fieldpharma.data.remote.ExpenseDto
 import com.baseras.fieldpharma.data.remote.ExpenseReviewReq
+import com.baseras.fieldpharma.data.remote.JointReviewReq
 import com.baseras.fieldpharma.data.remote.TourPlanDto
 import com.baseras.fieldpharma.data.remote.TourPlanReviewReq
+import com.baseras.fieldpharma.data.remote.VisitDto
 import com.baseras.fieldpharma.ui.components.*
 import com.baseras.fieldpharma.ui.theme.FieldPharmaTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,12 +37,14 @@ enum class ApprovalFilter(val label: String) {
     All("All"),
     TourPlans("Tour plans"),
     Expenses("Expenses"),
+    JointWork("Joint work"),
 }
 
 data class ApprovalsUiState(
     val loading: Boolean = true,
     val tourPlans: List<TourPlanDto> = emptyList(),
     val expenses: List<ExpenseDto> = emptyList(),
+    val jointVisits: List<VisitDto> = emptyList(),
     val filter: ApprovalFilter = ApprovalFilter.All,
     val actingId: String? = null,
     val error: String? = null,
@@ -61,7 +65,13 @@ class ApprovalsViewModel(private val api: Api) : ViewModel() {
                 val plans = runCatching { api.tourPlans() }.getOrNull()?.plans.orEmpty()
                     .filter { it.status == "PLANNED" }
                 val exps = runCatching { api.listExpenses(status = "PENDING") }.getOrNull()?.expenses.orEmpty()
-                _state.value = _state.value.copy(loading = false, tourPlans = plans, expenses = exps)
+                val jointVisits = runCatching { api.listPendingJointWork() }.getOrNull()?.visits.orEmpty()
+                _state.value = _state.value.copy(
+                    loading = false,
+                    tourPlans = plans,
+                    expenses = exps,
+                    jointVisits = jointVisits,
+                )
             } catch (e: Throwable) {
                 _state.value = _state.value.copy(loading = false, error = e.message ?: "Failed to load")
             }
@@ -85,6 +95,15 @@ class ApprovalsViewModel(private val api: Api) : ViewModel() {
             runCatching {
                 api.reviewExpense(id, ExpenseReviewReq(status = if (approve) "APPROVED" else "REJECTED"))
             }
+            _state.value = _state.value.copy(actingId = null)
+            refresh()
+        }
+    }
+
+    fun reviewJointWork(id: String, approve: Boolean) {
+        _state.value = _state.value.copy(actingId = id)
+        viewModelScope.launch {
+            runCatching { api.reviewJointWork(id, JointReviewReq(approved = approve)) }
             _state.value = _state.value.copy(actingId = null)
             refresh()
         }
@@ -126,9 +145,11 @@ fun ApprovalsScreen(onBack: () -> Unit) {
                 }
                 state.error != null -> ErrorBox(state.error!!) { vm.refresh() }
                 else -> {
-                    val plans = if (state.filter == ApprovalFilter.Expenses) emptyList() else state.tourPlans
-                    val exps = if (state.filter == ApprovalFilter.TourPlans) emptyList() else state.expenses
-                    val total = plans.size + exps.size
+                    val f = state.filter
+                    val plans = if (f == ApprovalFilter.All || f == ApprovalFilter.TourPlans) state.tourPlans else emptyList()
+                    val exps = if (f == ApprovalFilter.All || f == ApprovalFilter.Expenses) state.expenses else emptyList()
+                    val joints = if (f == ApprovalFilter.All || f == ApprovalFilter.JointWork) state.jointVisits else emptyList()
+                    val total = plans.size + exps.size + joints.size
 
                     if (total == 0) {
                         EmptyApprovals()
@@ -157,6 +178,17 @@ fun ApprovalsScreen(onBack: () -> Unit) {
                                         acting = state.actingId == e.id,
                                         onApprove = { vm.reviewExpense(e.id, true) },
                                         onReject = { vm.reviewExpense(e.id, false) },
+                                    )
+                                }
+                            }
+                            if (joints.isNotEmpty()) {
+                                item { SectionHeader("Joint work · ${joints.size}") }
+                                items(joints, key = { it.id }) { v ->
+                                    JointVisitCard(
+                                        visit = v,
+                                        acting = state.actingId == v.id,
+                                        onApprove = { vm.reviewJointWork(v.id, true) },
+                                        onReject = { vm.reviewJointWork(v.id, false) },
                                     )
                                 }
                             }
@@ -201,6 +233,27 @@ private fun TourPlanCard(
         title = plan.user?.name ?: "Unknown",
         subtitle = "${plan.date} · $stops stop${if (stops == 1) "" else "s"}",
         body = plan.notes,
+        acting = acting,
+        onApprove = onApprove,
+        onReject = onReject,
+    )
+}
+
+@Composable
+private fun JointVisitCard(
+    visit: VisitDto,
+    acting: Boolean,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+) {
+    val repName = visit.user?.name ?: "A field person"
+    val clientName = visit.client?.name ?: "a client"
+    val when_ = visit.checkInAt.take(10)
+    ApprovalCard(
+        icon = Icons.Default.CheckCircle,
+        title = "$repName @ $clientName",
+        subtitle = "$when_  ·  claimed you were on this visit",
+        body = visit.notes,
         acting = acting,
         onApprove = onApprove,
         onReject = onReject,

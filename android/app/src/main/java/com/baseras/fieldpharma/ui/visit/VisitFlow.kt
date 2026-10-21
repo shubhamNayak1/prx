@@ -26,6 +26,7 @@ class VisitViewModel(
     private val visitRepo: VisitRepository,
     private val clientRepo: ClientRepository,
     private val location: LocationProvider,
+    private val api: com.baseras.fieldpharma.data.remote.Api,
 ) : ViewModel() {
     val activeVisit = MutableStateFlow<VisitEntity?>(null)
     val activeClient = MutableStateFlow<ClientEntity?>(null)
@@ -34,11 +35,21 @@ class VisitViewModel(
     val msg = MutableStateFlow<String?>(null)
     val busy = MutableStateFlow(false)
 
+    val managers = MutableStateFlow<List<com.baseras.fieldpharma.data.remote.UserRow>>(emptyList())
+
     init {
         viewModelScope.launch {
             visitRepo.active()?.let {
                 activeVisit.value = it
                 activeClient.value = clientRepo.byId(it.clientId)
+            }
+            // Load managers once for the joint-work picker. Field-role users
+            // can still see managers above them because /api/users returns
+            // the company list filtered by role on the server.
+            runCatching { api.listUsers() }.onSuccess { res ->
+                managers.value = res.users.filter {
+                    it.isActive && it.role != "FIELD_PERSON"
+                }
             }
         }
     }
@@ -70,7 +81,7 @@ class VisitViewModel(
     }
 
     /** Persists current field edits AND checks out. busy always resets on failure. */
-    fun checkOutWith(notes: String, products: String) {
+    fun checkOutWith(notes: String, products: String, jointWithUserId: String?) {
         val v = activeVisit.value ?: return
         if (busy.value) return
         busy.value = true
@@ -79,10 +90,12 @@ class VisitViewModel(
                 val list = products.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 visitRepo.saveNotes(v.localId, notes, list)
                 val geo = location.current()
-                visitRepo.checkOut(v.localId, geo?.lat, geo?.lng)
+                visitRepo.checkOut(v.localId, geo?.lat, geo?.lng, jointWithUserId)
                 activeVisit.value = null
                 activeClient.value = null
-                msg.value = "Visit completed and queued for sync"
+                msg.value = if (jointWithUserId != null)
+                    "Visit completed — joint-work claim sent for approval"
+                else "Visit completed and queued for sync"
             }.onFailure { msg.value = "Check-out failed: ${it.message}" }
             busy.value = false
         }
@@ -99,7 +112,7 @@ fun VisitFlow(
     val app = FieldPharmaApp.instance
     val vm: VisitViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
         addInitializer(VisitViewModel::class) {
-            VisitViewModel(app.visitRepo, app.clientRepo, app.locationProvider)
+            VisitViewModel(app.visitRepo, app.clientRepo, app.locationProvider, app.api)
         }
     })
     val visit by vm.activeVisit.collectAsState()
@@ -107,6 +120,7 @@ fun VisitFlow(
     val recent by vm.recent.collectAsState()
     val msg by vm.msg.collectAsState()
     val busy by vm.busy.collectAsState()
+    val managers by vm.managers.collectAsState()
 
     LaunchedEffect(checkInClientId) {
         if (checkInClientId != null && visit == null) {
@@ -139,6 +153,7 @@ fun VisitFlow(
                     visit = visit!!,
                     client = client,
                     busy = busy,
+                    managers = managers,
                     onSave = vm::saveNotes,
                     onCheckOut = vm::checkOutWith,
                 )
@@ -182,19 +197,26 @@ fun VisitFlow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActiveVisitPanel(
     visit: VisitEntity,
     client: ClientEntity?,
     busy: Boolean,
+    managers: List<com.baseras.fieldpharma.data.remote.UserRow>,
     onSave: (notes: String, products: String) -> Unit,
-    onCheckOut: (notes: String, products: String) -> Unit,
+    onCheckOut: (notes: String, products: String, jointWithUserId: String?) -> Unit,
 ) {
     var notes by remember(visit.localId) { mutableStateOf(visit.notes ?: "") }
     var products by remember(visit.localId) { mutableStateOf(visit.productsJson?.replace("|", ", ") ?: "") }
 
+    // Joint-work local state
+    var jointWork by remember(visit.localId) { mutableStateOf(false) }
+    var jointWithId by remember(visit.localId) { mutableStateOf<String?>(null) }
+    var mgrMenu by remember { mutableStateOf(false) }
+
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(client?.name ?: "Client", style = MaterialTheme.typography.titleMedium)
             Text("Checked in: ${visit.checkInAt.take(19).replace("T", " ")}", style = MaterialTheme.typography.labelSmall)
             HorizontalDivider()
@@ -211,6 +233,47 @@ private fun ActiveVisitPanel(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            // Joint-work toggle
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = jointWork, onCheckedChange = { jointWork = it; if (!it) jointWithId = null })
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Joint working", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Mark if a manager was with you — they'll approve this visit",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (jointWork) {
+                ExposedDropdownMenuBox(expanded = mgrMenu, onExpandedChange = { mgrMenu = it }) {
+                    val selected = managers.firstOrNull { it.id == jointWithId }
+                    OutlinedTextField(
+                        value = selected?.let { "${it.name} (${roleShort(it.role)})" } ?: "Pick manager",
+                        onValueChange = {}, readOnly = true,
+                        label = { Text("Manager with you") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(mgrMenu) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(expanded = mgrMenu, onDismissRequest = { mgrMenu = false }) {
+                        if (managers.isEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("No managers found", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                onClick = {},
+                            )
+                        }
+                        managers.forEach { m ->
+                            DropdownMenuItem(
+                                text = { Text("${m.name}  ·  ${roleShort(m.role)}") },
+                                onClick = { jointWithId = m.id; mgrMenu = false },
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = { onSave(notes, products) },
@@ -218,8 +281,11 @@ private fun ActiveVisitPanel(
                     modifier = Modifier.weight(1f),
                 ) { Text("Save") }
                 Button(
-                    onClick = { onCheckOut(notes, products) },
-                    enabled = !busy,
+                    onClick = {
+                        val jwUser = if (jointWork) jointWithId else null
+                        onCheckOut(notes, products, jwUser)
+                    },
+                    enabled = !busy && (!jointWork || jointWithId != null),
                     modifier = Modifier.weight(1f),
                 ) {
                     if (busy) {
@@ -235,4 +301,11 @@ private fun ActiveVisitPanel(
             }
         }
     }
+}
+
+private fun roleShort(role: String): String = when (role) {
+    "ADMIN" -> "Admin"
+    "SENIOR_MANAGER" -> "SM"
+    "REGIONAL_MANAGER" -> "RM"
+    else -> role
 }

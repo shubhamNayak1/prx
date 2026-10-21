@@ -260,6 +260,9 @@ model Visit {
   checkOutLng         Float?
   isJointWork         Boolean   @default(false)
   jointWithUserId     String?   // Manager who joined the visit
+  // Approval status of the joint-work claim: null until manager reviews,
+  // true if the manager confirms they were there, false if they reject.
+  jointWorkApproved   Boolean?
   productsDiscussed   String[]
   notes               String?
   edetailViewedSlides Json?     // {slideId: durationSeconds}

@@ -8,7 +8,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -102,6 +106,9 @@ fun BillingScreen(onBack: () -> Unit) {
     val state by vm.state.collectAsState()
     val ctx = LocalContext.current
 
+    val role = app.authRepo.current?.role ?: "FIELD_PERSON"
+    val isAdmin = role == "ADMIN"
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -114,6 +121,10 @@ fun BillingScreen(onBack: () -> Unit) {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
+        },
+        bottomBar = {
+            // Keep the Admin bottom nav visible so Billing feels like a tab, not a dead-end.
+            if (isAdmin) AdminBillingBottomNav(onBack = onBack)
         },
     ) { padding ->
         LazyColumn(
@@ -439,6 +450,38 @@ private fun ErrorBanner(msg: String) {
             modifier = Modifier.padding(14.dp),
         )
     }
+}
+
+@Composable
+private fun AdminBillingBottomNav(onBack: () -> Unit) {
+    val tabs = listOf(
+        com.baseras.fieldpharma.ui.components.BottomNavSpec(
+            com.baseras.fieldpharma.ui.components.BottomTab.Home, "Home",
+            Icons.Filled.Home, Icons.Filled.Home,
+        ),
+        com.baseras.fieldpharma.ui.components.BottomNavSpec(
+            com.baseras.fieldpharma.ui.components.BottomTab.Plan, "People",
+            Icons.Filled.People, Icons.Filled.People,
+        ),
+        com.baseras.fieldpharma.ui.components.BottomNavSpec(
+            com.baseras.fieldpharma.ui.components.BottomTab.Visits, "Billing",
+            Icons.Filled.CreditCard, Icons.Filled.CreditCard,
+        ),
+        com.baseras.fieldpharma.ui.components.BottomNavSpec(
+            com.baseras.fieldpharma.ui.components.BottomTab.More, "More",
+            Icons.Filled.Menu, Icons.Filled.Menu,
+        ),
+    )
+    com.baseras.fieldpharma.ui.components.BottomNavBar(
+        selected = com.baseras.fieldpharma.ui.components.BottomTab.Visits,
+        onSelect = { tab ->
+            when (tab) {
+                com.baseras.fieldpharma.ui.components.BottomTab.Visits -> Unit
+                else -> onBack()
+            }
+        },
+        tabs = tabs,
+    )
 }
 
 /* ─────── pricing helpers (mirror backend/src/lib/billing.ts) ─────── */

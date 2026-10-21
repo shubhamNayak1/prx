@@ -16,6 +16,7 @@ import rcpaRoutes from './routes/rcpa';
 import dashboardRoutes from './routes/dashboard';
 import signupRoutes from './routes/signup';
 import billingRoutes from './routes/billing';
+import companyRoutes from './routes/company';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/samples', sampleRoutes);
 app.use('/api/edetail', edetailRoutes);
 app.use('/api/rcpa', rcpaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/company', companyRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 app.listen(port, () => {

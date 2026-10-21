@@ -21,6 +21,7 @@ import com.baseras.fieldpharma.ui.expense.NewExpenseScreen
 import com.baseras.fieldpharma.ui.help.HelpScreen
 import com.baseras.fieldpharma.ui.invite.InviteUserScreen
 import com.baseras.fieldpharma.ui.profile.ProfileScreen
+import com.baseras.fieldpharma.ui.settings.CompanyProfileScreen
 import com.baseras.fieldpharma.ui.settings.SettingsScreen
 import com.baseras.fieldpharma.ui.settings.SettingsVariant
 import com.baseras.fieldpharma.ui.approvals.ApprovalsScreen
@@ -28,6 +29,7 @@ import com.baseras.fieldpharma.ui.billing.BillingScreen
 import com.baseras.fieldpharma.ui.home.HomeRouter
 import com.baseras.fieldpharma.ui.more.MoreScreen
 import com.baseras.fieldpharma.ui.more.MoreVariant
+import com.baseras.fieldpharma.ui.plan.AssignPlanScreen
 import com.baseras.fieldpharma.ui.reports.ReportsScreen
 import com.baseras.fieldpharma.ui.team.TeamScreen
 import com.baseras.fieldpharma.ui.locked.LockedScreen
@@ -65,6 +67,8 @@ object Routes {
     const val SETTINGS = "settings"
     const val PROFILE = "profile"
     const val HELP = "help"
+    const val COMPANY_PROFILE = "settings/company"
+    const val ASSIGN_PLAN = "assign-plan"
 
     fun visits(clientId: String? = null) =
         if (clientId == null) "visits?clientId=" else "visits?clientId=$clientId"
@@ -159,6 +163,7 @@ fun AppNav() {
                 onBilling = { nav.navigate(Routes.BILLING) },
                 onReports = { nav.navigate(Routes.REPORTS) },
                 onInvite = { nav.navigate(Routes.INVITE) },
+                onAssignPlan = { nav.navigate(Routes.ASSIGN_PLAN) },
                 onMore = { nav.navigate(Routes.MORE) },
                 onLogout = {
                     app.authRepo.logout()
@@ -216,7 +221,20 @@ fun AppNav() {
                 "SENIOR_MANAGER", "REGIONAL_MANAGER" -> SettingsVariant.Manager
                 else -> SettingsVariant.FieldPerson
             }
-            SettingsScreen(variant = variant, onBack = { nav.popBackStack() })
+            SettingsScreen(
+                variant = variant,
+                onBack = { nav.popBackStack() },
+                onCompanyProfile = { nav.navigate(Routes.COMPANY_PROFILE) },
+                onExpensePolicies = { /* TODO: standalone screen */ },
+                onHierarchy = { nav.navigate(Routes.TEAM) },
+                onBilling = { nav.navigate(Routes.BILLING) },
+            )
+        }
+        composable(Routes.COMPANY_PROFILE) {
+            CompanyProfileScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.ASSIGN_PLAN) {
+            AssignPlanScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.PROFILE) {
             ProfileScreen(

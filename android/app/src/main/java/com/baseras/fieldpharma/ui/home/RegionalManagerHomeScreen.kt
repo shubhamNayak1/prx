@@ -49,6 +49,7 @@ data class RmHomeState(
 fun RegionalManagerHomeScreen(
     onApprovals: () -> Unit,
     onTeam: () -> Unit,
+    onAssignPlan: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -88,6 +89,7 @@ fun RegionalManagerHomeScreen(
         state = state,
         onApprovals = onApprovals,
         onTeam = onTeam,
+        onAssignPlan = onAssignPlan,
         onMore = onMore,
         onLogout = onLogout,
     )
@@ -101,6 +103,7 @@ private fun RmHomeScaffold(
     state: RmHomeState,
     onApprovals: () -> Unit,
     onTeam: () -> Unit,
+    onAssignPlan: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -169,6 +172,23 @@ private fun RmHomeScaffold(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
+
+            // ─── quick actions ───
+            item {
+                com.baseras.fieldpharma.ui.components.QuickActionsRow(
+                    actions = listOf(
+                        com.baseras.fieldpharma.ui.components.QuickAction(
+                            "Assign plan", Icons.Default.CalendarMonth, onAssignPlan,
+                        ),
+                        com.baseras.fieldpharma.ui.components.QuickAction(
+                            "Approvals", Icons.Default.FactCheck, onApprovals,
+                        ),
+                        com.baseras.fieldpharma.ui.components.QuickAction(
+                            "My team", Icons.Default.People, onTeam,
+                        ),
+                    ),
+                )
             }
 
             // ─── approvals ───
@@ -389,7 +409,7 @@ private fun RmHomePreview() {
                     TeamMember("Neha Gupta", "Field · Delhi", TeamMemberStatus.Flagged, "Out of radius ×2"),
                 ),
             ),
-            onApprovals = {}, onTeam = {}, onMore = {}, onLogout = {},
+            onApprovals = {}, onTeam = {}, onAssignPlan = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -411,7 +431,7 @@ private fun RmHomeEmptyPreview() {
                 pendingClients = 0,
                 team = emptyList(),
             ),
-            onApprovals = {}, onTeam = {}, onMore = {}, onLogout = {},
+            onApprovals = {}, onTeam = {}, onAssignPlan = {}, onMore = {}, onLogout = {},
         )
     }
 }

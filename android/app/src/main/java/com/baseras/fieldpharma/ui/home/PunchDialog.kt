@@ -213,13 +213,35 @@ private fun SessionRow(session: AttendanceEntity) {
                     },
                     style = MaterialTheme.typography.titleSmall,
                 )
-                if (dur != null) {
-                    Text(dur, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (dur != null) {
+                        Text(dur, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    GpsBadge(session.punchInLat, session.punchInLng)
                 }
             }
             if (isOpen) StatusPill("Live", PillTone.Info)
         }
     }
+}
+
+/** Compact "📍 captured" indicator; shows actual coords on tap in future. */
+@Composable
+private fun GpsBadge(lat: Double?, lng: Double?) {
+    if (lat == null || lng == null) {
+        Text(
+            "📍 No GPS",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        return
+    }
+    Text(
+        "📍 ${"%.4f".format(lat)}, ${"%.4f".format(lng)}",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

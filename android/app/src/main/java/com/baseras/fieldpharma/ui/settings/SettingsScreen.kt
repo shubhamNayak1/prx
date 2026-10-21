@@ -21,7 +21,14 @@ enum class SettingsVariant { FieldPerson, Manager, Admin }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(variant: SettingsVariant, onBack: () -> Unit) {
+fun SettingsScreen(
+    variant: SettingsVariant,
+    onBack: () -> Unit,
+    onCompanyProfile: () -> Unit = {},
+    onExpensePolicies: () -> Unit = {},
+    onHierarchy: () -> Unit = {},
+    onBilling: () -> Unit = {},
+) {
     val app = FieldPharmaApp.instance
     val user = app.authRepo.current
 
@@ -65,10 +72,18 @@ fun SettingsScreen(variant: SettingsVariant, onBack: () -> Unit) {
 
             if (variant == SettingsVariant.Admin) {
                 item { SectionHeader("Company") }
-                item { StaticRow(Icons.Default.Business, "Company profile", "Name, GSTIN, billing contact") }
-                item { StaticRow(Icons.Default.Receipt, "TA / DA rates", "Per-grade travel and daily allowance") }
-                item { StaticRow(Icons.Default.AccountTree, "Hierarchy", "Reporting lines across the org") }
-                item { StaticRow(Icons.Default.CreditCard, "Billing", "Plan, invoices, GSTIN") }
+                item {
+                    ClickableRow(Icons.Default.Business, "Company profile", "Name, GSTIN, billing contact", onCompanyProfile)
+                }
+                item {
+                    ClickableRow(Icons.Default.Receipt, "TA / DA rates", "Per-grade travel and daily allowance", onExpensePolicies)
+                }
+                item {
+                    ClickableRow(Icons.Default.AccountTree, "Hierarchy", "Reporting lines across the org", onHierarchy)
+                }
+                item {
+                    ClickableRow(Icons.Default.CreditCard, "Billing", "Plan, invoices, GSTIN", onBilling)
+                }
             }
 
             item { SectionHeader("About") }
@@ -132,6 +147,27 @@ private fun StaticRow(icon: ImageVector, title: String, subtitle: String) {
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+@Composable
+private fun ClickableRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        onClick = onClick,
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

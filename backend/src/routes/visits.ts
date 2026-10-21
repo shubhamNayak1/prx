@@ -88,4 +88,63 @@ router.get('/', async (req, res) => {
   res.json({ visits });
 });
 
+/**
+ * Joint-work review. Only the manager that the Field Person tagged can
+ * approve/reject, and only while the visit is still pending (jointWorkApproved
+ * is null). Returns 403 otherwise.
+ */
+const jointReviewSchema = z.object({ approved: z.boolean() });
+router.patch('/:id/joint-review', async (req, res) => {
+  const parsed = jointReviewSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+
+  const visit = await prisma.visit.findFirst({
+    where: {
+      id: req.params.id,
+      user: { companyId: req.auth!.companyId },
+    },
+  });
+  if (!visit) return res.status(404).json({ error: 'Visit not found' });
+  if (!visit.isJointWork || !visit.jointWithUserId) {
+    return res.status(400).json({ error: 'NOT_A_JOINT_WORK_VISIT' });
+  }
+  if (visit.jointWithUserId !== req.auth!.userId) {
+    return res.status(403).json({ error: 'NOT_THE_TAGGED_MANAGER' });
+  }
+  if (visit.jointWorkApproved !== null) {
+    return res.status(400).json({ error: 'ALREADY_REVIEWED' });
+  }
+
+  const updated = await prisma.visit.update({
+    where: { id: visit.id },
+    data: { jointWorkApproved: parsed.data.approved },
+  });
+  res.json({ visit: updated });
+});
+
+/**
+ * Pending joint-work claims for the signed-in manager — field reps tagged
+ * them as the accompanying manager and the visit is awaiting their review.
+ */
+router.get('/joint-pending', async (req, res) => {
+  if (req.auth!.role === Role.FIELD_PERSON) {
+    return res.status(403).json({ error: 'MANAGER_ONLY' });
+  }
+  const visits = await prisma.visit.findMany({
+    where: {
+      user: { companyId: req.auth!.companyId },
+      isJointWork: true,
+      jointWithUserId: req.auth!.userId,
+      jointWorkApproved: null,
+    },
+    orderBy: { checkInAt: 'desc' },
+    include: {
+      client: { select: { id: true, name: true, type: true } },
+      user: { select: { id: true, name: true, employeeCode: true } },
+    },
+    take: 200,
+  });
+  res.json({ visits });
+});
+
 export default router;

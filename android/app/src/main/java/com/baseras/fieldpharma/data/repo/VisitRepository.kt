@@ -36,13 +36,14 @@ class VisitRepository(
     }
 
     /** Mark visit completed locally, then try to push to server. */
-    suspend fun checkOut(localId: Long, lat: Double?, lng: Double?) {
+    suspend fun checkOut(localId: Long, lat: Double?, lng: Double?, jointWithUserId: String? = null) {
         val v = dao.get(localId) ?: return
         val updated = v.copy(
             checkOutAt = Instant.now().toString(),
             checkOutLat = lat,
             checkOutLng = lng,
             state = "COMPLETED",
+            jointWithUserId = jointWithUserId ?: v.jointWithUserId,
         )
         dao.update(updated)
         trySync(updated)
@@ -69,11 +70,12 @@ class VisitRepository(
                 checkOutLng = v.checkOutLng,
                 productsDiscussed = v.productsJson?.split("|"),
                 notes = v.notes,
+                isJointWork = v.jointWithUserId != null,
+                jointWithUserId = v.jointWithUserId,
             ))
             dao.markSynced(v.localId, res.visit.id)
             true
         } catch (t: Throwable) {
-            // Schedule a real-time retry as soon as network is back.
             SyncTrigger.fire()
             false
         }

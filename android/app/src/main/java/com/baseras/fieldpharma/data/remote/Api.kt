@@ -47,7 +47,11 @@ interface Api {
     suspend fun upload(@Part file: MultipartBody.Part): UploadRes
 
     @GET("/api/clients")
-    suspend fun listClients(@Query("q") q: String? = null): ClientListRes
+    suspend fun listClients(
+        @Query("q") q: String? = null,
+        @Query("pincode") pincode: String? = null,
+        @Query("excludeIds") excludeIdsCsv: String? = null,
+    ): ClientListRes
 
     @POST("/api/clients")
     suspend fun createClient(@Body req: ClientCreateReq): ClientRes
@@ -72,6 +76,12 @@ interface Api {
         @Query("from") from: String? = null,
         @Query("to") to: String? = null,
     ): VisitListRes
+
+    @GET("/api/visits/joint-pending")
+    suspend fun listPendingJointWork(): VisitListRes
+
+    @PATCH("/api/visits/{id}/joint-review")
+    suspend fun reviewJointWork(@Path("id") id: String, @Body req: JointReviewReq): VisitRes
 
     @POST("/api/expenses")
     suspend fun createExpense(@Body req: ExpenseReq): ExpenseRes
@@ -117,6 +127,13 @@ interface Api {
     @GET("/api/dashboard/role-summary")
     suspend fun roleSummary(): RoleSummaryRes
 
+    // ───────── Company — admin profile ─────────
+    @GET("/api/company")
+    suspend fun getCompany(): CompanyRes
+
+    @PATCH("/api/company")
+    suspend fun updateCompany(@Body req: CompanyUpdateReq): CompanyRes
+
     // ───────── Users — admin / manager side ─────────
     @GET("/api/users")
     suspend fun listUsers(): UserListRes
@@ -131,6 +148,23 @@ interface Api {
     @POST("/api/billing/upgrade")
     suspend fun billingUpgrade(@Body req: BillingUpgradeReq): BillingUpgradeRes
 }
+
+@Serializable data class CompanyRes(val company: CompanyDto)
+@Serializable
+data class CompanyDto(
+    val id: String,
+    val name: String,
+    val gstin: String? = null,
+    val billingEmail: String? = null,
+    val billingPhone: String? = null,
+)
+@Serializable
+data class CompanyUpdateReq(
+    val name: String? = null,
+    val gstin: String? = null,
+    val billingEmail: String? = null,
+    val billingPhone: String? = null,
+)
 
 @Serializable data class UserListRes(val users: List<UserRow>)
 @Serializable
@@ -349,6 +383,7 @@ data class TourPlanEntryDto(
 data class TourPlanReq(
     val date: String, val notes: String? = null,
     val entries: List<TourPlanEntryReq>,
+    val userId: String? = null,   // Manager creating for a report; omitted = self
 )
 
 @Serializable
@@ -365,18 +400,26 @@ data class VisitReq(
     val checkOutAt: String? = null,
     val checkOutLat: Double? = null, val checkOutLng: Double? = null,
     val productsDiscussed: List<String>? = null,
-    val notes: String? = null, val isJointWork: Boolean? = null,
+    val notes: String? = null,
+    val isJointWork: Boolean? = null,
+    val jointWithUserId: String? = null,
 )
 
 @Serializable
 data class VisitDto(
     val id: String, val clientId: String, val checkInAt: String,
     val checkOutAt: String? = null, val notes: String? = null,
+    val isJointWork: Boolean? = null,
+    val jointWithUserId: String? = null,
+    val jointWorkApproved: Boolean? = null,
     val client: ClientDto? = null,
+    val user: VisitUser? = null,
 )
 
+@Serializable data class VisitUser(val id: String, val name: String, val employeeCode: String? = null)
 @Serializable data class VisitRes(val visit: VisitDto)
 @Serializable data class VisitListRes(val visits: List<VisitDto>)
+@Serializable data class JointReviewReq(val approved: Boolean)
 
 @Serializable
 data class ExpenseReq(

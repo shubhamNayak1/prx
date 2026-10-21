@@ -10,11 +10,16 @@ router.use(requireAuth);
 router.get('/', async (req, res) => {
   const search = (req.query.q as string | undefined)?.trim();
   const type = req.query.type as ClientType | undefined;
+  const pincode = (req.query.pincode as string | undefined)?.trim();
+  const excludeIdsCsv = (req.query.excludeIds as string | undefined)?.trim();
+  const excludeIds = excludeIdsCsv ? excludeIdsCsv.split(',').filter(Boolean) : [];
   const clients = await prisma.client.findMany({
     where: {
       companyId: req.auth!.companyId,
       ...(type ? { type } : {}),
       ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+      ...(pincode ? { pincode } : {}),
+      ...(excludeIds.length ? { id: { notIn: excludeIds } } : {}),
     },
     orderBy: { name: 'asc' },
     take: 500,

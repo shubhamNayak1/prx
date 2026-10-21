@@ -64,6 +64,7 @@ data class VisitEntity(
     val notes: String? = null,
     val productsJson: String? = null,
     val state: String = "IN_PROGRESS",
+    val jointWithUserId: String? = null,
 )
 
 @Entity(tableName = "edetail_decks")
@@ -92,7 +93,7 @@ data class SlideEntity(
         DeckEntity::class,
         SlideEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

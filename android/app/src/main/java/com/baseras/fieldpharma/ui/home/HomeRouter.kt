@@ -17,6 +17,7 @@ fun HomeRouter(
     onBilling: () -> Unit,
     onReports: () -> Unit,
     onInvite: () -> Unit,
+    onAssignPlan: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -39,6 +40,7 @@ fun HomeRouter(
         "REGIONAL_MANAGER" -> RegionalManagerHomeScreen(
             onApprovals = onApprovals,
             onTeam = onTeam,
+            onAssignPlan = onAssignPlan,
             onMore = onMore,
             onLogout = onLogout,
         )

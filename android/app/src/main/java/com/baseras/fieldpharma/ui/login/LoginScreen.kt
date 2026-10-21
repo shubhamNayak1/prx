@@ -218,32 +218,89 @@ fun LoginScreen(onSignedIn: () -> Unit) {
     })
     val state by vm.state.collectAsState()
 
-    Scaffold { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             Column(
                 Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(32.dp))
-                Image(
-                    painter = painterResource(id = R.drawable.app_logo),
-                    contentDescription = "Baserastech Field Pharma",
-                    modifier = Modifier.size(120.dp),
-                )
-                Spacer(Modifier.height(16.dp))
-
-                when (val step = state.step) {
-                    Step.Phone -> PhoneStep(state, vm)
-                    is Step.Otp -> OtpStep(step, state, vm, onSignedIn)
-                    is Step.Pin -> PinStep(step, state, vm, onSignedIn)
-                    is Step.CreatePin -> CreatePinStep(step, state, vm, onSignedIn)
-                    is Step.Company -> CompanyStep(step, state, vm, onSignedIn)
+                // ─── Hero section ───
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                0f to MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                1f to androidx.compose.ui.graphics.Color.Transparent,
+                            )
+                        ),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(top = 40.dp, bottom = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(28.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 6.dp,
+                            modifier = Modifier.size(120.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.app_logo),
+                                    contentDescription = "Baserastech Field Pharma",
+                                    modifier = Modifier.size(96.dp),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            "Baserastech Field Pharma",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            "Pharma field-force reporting",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                // ─── Form card ───
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
+                    shadowElevation = 1.dp,
+                ) {
+                    Column(
+                        Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        when (val step = state.step) {
+                            Step.Phone -> PhoneStep(state, vm)
+                            is Step.Otp -> OtpStep(step, state, vm, onSignedIn)
+                            is Step.Pin -> PinStep(step, state, vm, onSignedIn)
+                            is Step.CreatePin -> CreatePinStep(step, state, vm, onSignedIn)
+                            is Step.Company -> CompanyStep(step, state, vm, onSignedIn)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(32.dp))
+                Text(
+                    "© Baserastech",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
             }
             LoadingOverlay(visible = state.busy, label = loadingLabel(state.step))
         }
