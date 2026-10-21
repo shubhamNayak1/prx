@@ -63,8 +63,8 @@ class LoginViewModel(
 
     /* ───── Phone step ───── */
     fun sendOtp(phone: String, purpose: String = "LOGIN") {
-        if (!phone.matches(Regex("^\\d{7,15}$"))) {
-            _s.value = _s.value.copy(error = "Enter a valid number (digits only, no + or 0 prefix)")
+        if (!phone.matches(Regex("^\\d{10}$"))) {
+            _s.value = _s.value.copy(error = "Enter 10 digits (don't include +91 or 0)")
             return
         }
         _s.value = _s.value.copy(busy = true, error = null, resetMode = purpose == "RESET_PIN")
@@ -84,8 +84,8 @@ class LoginViewModel(
 
     /** Shortcut: skip OTP for returning-user PIN login. */
     fun goToPinEntry(phone: String) {
-        if (!phone.matches(Regex("^\\d{7,15}$"))) {
-            _s.value = _s.value.copy(error = "Enter a valid number (digits only, no + or 0 prefix)")
+        if (!phone.matches(Regex("^\\d{10}$"))) {
+            _s.value = _s.value.copy(error = "Enter 10 digits (don't include +91 or 0)")
             return
         }
         _s.value = LoginUiState(step = Step.Pin(phone, isCreate = false))
@@ -127,8 +127,16 @@ class LoginViewModel(
                     _s.value = _s.value.copy(busy = false, success = true)
                     onDone()
                 }
-                .onFailure {
-                    _s.value = _s.value.copy(busy = false, error = "Wrong PIN. Try again or use WhatsApp OTP.")
+                .onFailure { t ->
+                    val msg = parseErrorMessage(t)
+                    val friendly = when {
+                        msg.contains("PIN_NOT_SET", true) ->
+                            "No PIN set for this number. Tap 'First time? Send WhatsApp code' to set one."
+                        msg.contains("Invalid credentials", true) ->
+                            "Phone or PIN is wrong. If this is a new number, use 'Send WhatsApp code' instead."
+                        else -> msg
+                    }
+                    _s.value = _s.value.copy(busy = false, error = friendly)
                 }
         }
     }
@@ -189,6 +197,14 @@ private fun friendly(msg: String?): String = when {
     msg.contains("TOO_MANY", true) -> "Too many tries — tap Resend"
     msg.contains("RATE_LIMITED", true) -> "Too many requests. Try again later."
     else -> msg
+}
+
+/** Pulls the backend's error.message / error body out of a Retrofit HttpException. */
+internal fun parseErrorMessage(t: Throwable): String {
+    val http = t as? retrofit2.HttpException ?: return t.message ?: "Network error"
+    val body = runCatching { http.response()?.errorBody()?.string() }.getOrNull() ?: return "HTTP ${http.code()}"
+    val match = Regex("""\"(?:error|message)\":\s*\"([^\"]+)\"""").find(body)
+    return match?.groupValues?.get(1) ?: "HTTP ${http.code()}: $body"
 }
 
 /* ──────────────────────────── Screen ──────────────────────────── */

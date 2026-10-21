@@ -20,13 +20,17 @@ object ApiClient {
         }
         val auth = okhttp3.Interceptor { chain ->
             val req = chain.request()
-            val isLogin = req.url.encodedPath.endsWith("/auth/login")
-            val newReq = if (!isLogin && authStore.token != null) {
+            // Every /api/auth/* endpoint is pre-authentication (login,
+            // pin-login, request-otp, verify-otp, set-pin, signup-complete).
+            // We do NOT bomb-out the stored session on their 4xx responses,
+            // otherwise a wrong-PIN attempt would log a user out.
+            val isAuthRoute = req.url.encodedPath.contains("/api/auth/")
+            val newReq = if (!isAuthRoute && authStore.token != null) {
                 req.newBuilder().addHeader("Authorization", "Bearer ${authStore.token}").build()
             } else req
 
             val res = chain.proceed(newReq)
-            if (!isLogin && res.code == 401) {
+            if (!isAuthRoute && res.code == 401) {
                 authStore.onSessionExpired()
             }
             res
