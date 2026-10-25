@@ -50,6 +50,8 @@ fun MoreScreen(
     onReports: () -> Unit = {},
     onInvite: () -> Unit = {},
     onHelp: () -> Unit = {},
+    onDcrDay: () -> Unit = {},
+    onDcrDownload: () -> Unit = {},
     onLogout: () -> Unit,
 ) {
     val app = FieldPharmaApp.instance
@@ -57,6 +59,8 @@ fun MoreScreen(
 
     val items: List<MoreItem> = when (variant) {
         MoreVariant.FieldPerson -> listOf(
+            MoreItem(Icons.Default.Description, "Today's work header", "DCR: place, type of work, KM", onDcrDay),
+            MoreItem(Icons.Default.FileDownload, "Download DCR", "Monthly workbook — share on WhatsApp", onDcrDownload),
             MoreItem(Icons.Default.LocalHospital, "Clients", "Add doctor / chemist / stockist", onClients),
             MoreItem(Icons.Default.Receipt, "Expenses", "TA / DA / actuals", onExpenses),
             MoreItem(Icons.Default.CardGiftcard, "Samples", "Stock balance + distribute", onSamples),
@@ -67,7 +71,7 @@ fun MoreScreen(
             MoreItem(Icons.AutoMirrored.Filled.Logout, "Sign out", null, onLogout, danger = true),
         )
         MoreVariant.Manager -> listOf(
-            MoreItem(Icons.Default.PersonSearch, "Joint working", "Log coaching for a rep", onReports),
+            MoreItem(Icons.Default.FileDownload, "Download team DCR", "Pick a rep + date range, share on WhatsApp", onDcrDownload),
             MoreItem(Icons.Default.Analytics, "Reports", "Attainment & spend charts", onReports),
             MoreItem(Icons.Default.Receipt, "My expenses", "Submit your own", onExpenses),
             MoreItem(Icons.Default.LocalHospital, "Clients", "Browse & approve", onClients),
@@ -76,6 +80,7 @@ fun MoreScreen(
             MoreItem(Icons.AutoMirrored.Filled.Logout, "Sign out", null, onLogout, danger = true),
         )
         MoreVariant.Admin -> listOf(
+            MoreItem(Icons.Default.FileDownload, "Download DCR", "Any user, any date range — WhatsApp share", onDcrDownload),
             MoreItem(Icons.Default.PersonAdd, "Invite user", "Add a Field Person or Manager", onInvite),
             MoreItem(Icons.Default.CreditCard, "Billing", "Plan, invoices, GSTIN", onBilling),
             MoreItem(Icons.Default.AccountTree, "Hierarchy", "Org chart & reporting lines", onHierarchy),

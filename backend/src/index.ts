@@ -17,6 +17,8 @@ import dashboardRoutes from './routes/dashboard';
 import signupRoutes from './routes/signup';
 import billingRoutes from './routes/billing';
 import companyRoutes from './routes/company';
+import dcrDayRoutes from './routes/dcr-days';
+import reportRoutes from './routes/reports';
 
 const app = express();
 
@@ -47,6 +49,8 @@ app.use('/api/edetail', edetailRoutes);
 app.use('/api/rcpa', rcpaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/company', companyRoutes);
+app.use('/api/dcr-days', dcrDayRoutes);
+app.use('/api/reports', reportRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 app.listen(port, () => {

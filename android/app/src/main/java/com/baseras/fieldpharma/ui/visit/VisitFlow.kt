@@ -81,7 +81,12 @@ class VisitViewModel(
     }
 
     /** Persists current field edits AND checks out. busy always resets on failure. */
-    fun checkOutWith(notes: String, products: String, jointWithUserId: String?) {
+    fun checkOutWith(
+        notes: String,
+        products: String,
+        jointWithUserId: String?,
+        money: com.baseras.fieldpharma.data.repo.VisitMoney = com.baseras.fieldpharma.data.repo.VisitMoney(),
+    ) {
         val v = activeVisit.value ?: return
         if (busy.value) return
         busy.value = true
@@ -90,7 +95,7 @@ class VisitViewModel(
                 val list = products.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 visitRepo.saveNotes(v.localId, notes, list)
                 val geo = location.current()
-                visitRepo.checkOut(v.localId, geo?.lat, geo?.lng, jointWithUserId)
+                visitRepo.checkOut(v.localId, geo?.lat, geo?.lng, jointWithUserId, money)
                 activeVisit.value = null
                 activeClient.value = null
                 msg.value = if (jointWithUserId != null)
@@ -155,7 +160,9 @@ fun VisitFlow(
                     busy = busy,
                     managers = managers,
                     onSave = vm::saveNotes,
-                    onCheckOut = vm::checkOutWith,
+                    onCheckOut = { notes, products, jwUser, money ->
+                        vm.checkOutWith(notes, products, jwUser, money)
+                    },
                 )
             } else {
                 Button(
@@ -205,15 +212,27 @@ private fun ActiveVisitPanel(
     busy: Boolean,
     managers: List<com.baseras.fieldpharma.data.remote.UserRow>,
     onSave: (notes: String, products: String) -> Unit,
-    onCheckOut: (notes: String, products: String, jointWithUserId: String?) -> Unit,
+    onCheckOut: (notes: String, products: String, jointWithUserId: String?, money: com.baseras.fieldpharma.data.repo.VisitMoney) -> Unit,
 ) {
     var notes by remember(visit.localId) { mutableStateOf(visit.notes ?: "") }
     var products by remember(visit.localId) { mutableStateOf(visit.productsJson?.replace("|", ", ") ?: "") }
+
+    // Money / order capture (shown per client type below).
+    var pob by remember(visit.localId) { mutableStateOf(visit.pobValue?.cleanStr() ?: "") }
+    var payment by remember(visit.localId) { mutableStateOf(visit.paymentCollected?.cleanStr() ?: "") }
+    var expiry by remember(visit.localId) { mutableStateOf(visit.expiryAmount?.cleanStr() ?: "") }
+    var breakage by remember(visit.localId) { mutableStateOf(visit.breakageAmount?.cleanStr() ?: "") }
+    var overdue by remember(visit.localId) { mutableStateOf(visit.overdueOutstanding?.cleanStr() ?: "") }
+    var orderVal by remember(visit.localId) { mutableStateOf(visit.orderValue?.cleanStr() ?: "") }
 
     // Joint-work local state
     var jointWork by remember(visit.localId) { mutableStateOf(false) }
     var jointWithId by remember(visit.localId) { mutableStateOf<String?>(null) }
     var mgrMenu by remember { mutableStateOf(false) }
+
+    val isDoctor = client?.type == "DOCTOR"
+    val isChemist = client?.type == "CHEMIST"
+    val isStockist = client?.type == "STOCKIST"
 
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -223,7 +242,7 @@ private fun ActiveVisitPanel(
 
             OutlinedTextField(
                 value = products, onValueChange = { products = it },
-                label = { Text("Products discussed (comma-separated)") },
+                label = { Text(if (isChemist || isStockist) "Products ordered (comma-separated, up to 6)" else "Products discussed (comma-separated)") },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -232,6 +251,49 @@ private fun ActiveVisitPanel(
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            // POB value — applies to doctors, chemists and stockists.
+            OutlinedTextField(
+                value = pob,
+                onValueChange = { pob = it.filterMoney() },
+                label = { Text("POB value (₹)") },
+                leadingIcon = { Text("₹", style = MaterialTheme.typography.titleMedium) },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            if (isStockist) {
+                HorizontalDivider()
+                Text(
+                    "Stockist order details",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                MoneyRow(
+                    a = "Payment" to payment,
+                    b = "Order value" to orderVal,
+                    onAChange = { payment = it.filterMoney() },
+                    onBChange = { orderVal = it.filterMoney() },
+                )
+                MoneyRow(
+                    a = "Expiry (₹)" to expiry,
+                    b = "Breakage (₹)" to breakage,
+                    onAChange = { expiry = it.filterMoney() },
+                    onBChange = { breakage = it.filterMoney() },
+                )
+                OutlinedTextField(
+                    value = overdue, onValueChange = { overdue = it.filterMoney() },
+                    label = { Text("Overdue outstanding (₹)") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             // Joint-work toggle
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,7 +345,15 @@ private fun ActiveVisitPanel(
                 Button(
                     onClick = {
                         val jwUser = if (jointWork) jointWithId else null
-                        onCheckOut(notes, products, jwUser)
+                        val money = com.baseras.fieldpharma.data.repo.VisitMoney(
+                            pobValue = pob.toDoubleOrNull(),
+                            paymentCollected = payment.toDoubleOrNull().takeIf { isStockist },
+                            expiryAmount = expiry.toDoubleOrNull().takeIf { isStockist },
+                            breakageAmount = breakage.toDoubleOrNull().takeIf { isStockist },
+                            overdueOutstanding = overdue.toDoubleOrNull().takeIf { isStockist },
+                            orderValue = orderVal.toDoubleOrNull().takeIf { isStockist },
+                        )
+                        onCheckOut(notes, products, jwUser, money)
                     },
                     enabled = !busy && (!jointWork || jointWithId != null),
                     modifier = Modifier.weight(1f),
@@ -308,4 +378,42 @@ private fun roleShort(role: String): String = when (role) {
     "SENIOR_MANAGER" -> "SM"
     "REGIONAL_MANAGER" -> "RM"
     else -> role
+}
+
+private fun String.filterMoney(): String = this.filter { it.isDigit() || it == '.' }.let { s ->
+    // Keep only one decimal point.
+    val i = s.indexOf('.')
+    if (i < 0) s else s.substring(0, i + 1) + s.substring(i + 1).replace(".", "")
+}
+
+private fun Double.cleanStr(): String =
+    if (this == this.toLong().toDouble()) this.toLong().toString() else this.toString()
+
+@Composable
+private fun MoneyRow(
+    a: Pair<String, String>,
+    b: Pair<String, String>,
+    onAChange: (String) -> Unit,
+    onBChange: (String) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = a.second, onValueChange = onAChange,
+            label = { Text(a.first) },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+            ),
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedTextField(
+            value = b.second, onValueChange = onBChange,
+            label = { Text(b.first) },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+            ),
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }

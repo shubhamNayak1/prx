@@ -59,7 +59,7 @@ class ReportsViewModel(private val repo: DashboardRepository) : ViewModel() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportsScreen(onBack: () -> Unit) {
+fun ReportsScreen(onBack: () -> Unit, onDcrDownload: () -> Unit = {}) {
     val app = FieldPharmaApp.instance
     val vm: ReportsViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
         addInitializer(ReportsViewModel::class) { ReportsViewModel(app.dashboardRepo) }
@@ -93,6 +93,7 @@ fun ReportsScreen(onBack: () -> Unit) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                    item { DcrDownloadCard(onOpen = onDcrDownload) }
                     item { AttainmentDonut(s.kpis?.attainmentPct ?: 0) }
                     item { KpiStrip(s.kpis) }
                     item {
@@ -110,6 +111,43 @@ fun ReportsScreen(onBack: () -> Unit) {
                     item { ActiveTodayBars(s.team) }
                 }
             }
+        }
+    }
+}
+
+/* ─────── DCR download entry ─────── */
+
+@Composable
+private fun DcrDownloadCard(onOpen: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 1.dp,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        onClick = onOpen,
+    ) {
+        Row(
+            Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Daily Field Report (DCR)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Generate the monthly workbook and share to WhatsApp.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            FilledTonalButton(
+                onClick = onOpen,
+                shape = MaterialTheme.shapes.small,
+            ) { Text("Open") }
         }
     }
 }

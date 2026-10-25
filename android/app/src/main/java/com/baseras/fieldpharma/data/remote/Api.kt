@@ -11,6 +11,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 interface Api {
     @POST("/api/auth/login")
@@ -106,6 +107,26 @@ interface Api {
     @PUT("/api/expense-policies")
     suspend fun upsertExpensePolicy(@Body req: ExpensePolicyUpsertReq): ExpensePolicyRes
 
+    // ───────── DCR day metadata ─────────
+    @GET("/api/dcr-days")
+    suspend fun listDcrDays(
+        @Query("from") from: String,
+        @Query("to") to: String,
+        @Query("userId") userId: String? = null,
+    ): DcrDayListRes
+
+    @PUT("/api/dcr-days")
+    suspend fun upsertDcrDay(@Body req: DcrDayReq): DcrDayRes
+
+    // ───────── Reports (xlsx) ─────────
+    @GET("/api/reports/dcr.xlsx")
+    @Streaming
+    suspend fun downloadDcr(
+        @Query("from") from: String,
+        @Query("to") to: String,
+        @Query("userId") userId: String? = null,
+    ): retrofit2.Response<okhttp3.ResponseBody>
+
     @GET("/api/samples/balance")
     suspend fun sampleBalance(): SampleBalanceRes
 
@@ -179,6 +200,7 @@ data class UserRow(
     val id: String, val name: String, val email: String,
     val phone: String? = null,
     val role: String, val grade: String? = null,
+    val hq: String? = null,
     val employeeCode: String? = null,
     val isActive: Boolean = true,
     val managerId: String? = null,
@@ -410,6 +432,13 @@ data class VisitReq(
     val notes: String? = null,
     val isJointWork: Boolean? = null,
     val jointWithUserId: String? = null,
+    // DCR order fields (all optional; stockist-only use most of them)
+    val pobValue: Double? = null,
+    val paymentCollected: Double? = null,
+    val expiryAmount: Double? = null,
+    val breakageAmount: Double? = null,
+    val overdueOutstanding: Double? = null,
+    val orderValue: Double? = null,
 )
 
 @Serializable
@@ -419,6 +448,12 @@ data class VisitDto(
     val isJointWork: Boolean? = null,
     val jointWithUserId: String? = null,
     val jointWorkApproved: Boolean? = null,
+    val pobValue: Double? = null,
+    val paymentCollected: Double? = null,
+    val expiryAmount: Double? = null,
+    val breakageAmount: Double? = null,
+    val overdueOutstanding: Double? = null,
+    val orderValue: Double? = null,
     val client: ClientDto? = null,
     val user: VisitUser? = null,
 )
@@ -468,6 +503,32 @@ data class ExpensePolicyUpsertReq(
     val grade: String,
     val taRatePerKm: Double,
     val daFlatRate: Double,
+)
+
+@Serializable
+data class DcrDayDto(
+    val id: String? = null,
+    val date: String,
+    val workTypeI: String? = null,     // INDP | JOINT | MEETING
+    val workTypeII: String? = null,    // LOCAL | EX | OS
+    val placeOfWork: String? = null,
+    val baseTownOnOs: String? = null,
+    val routeNoInSvl: String? = null,
+    val kmTravelled: Double? = null,
+    val dfrNo: Int? = null,
+)
+@Serializable data class DcrDayRes(val day: DcrDayDto)
+@Serializable data class DcrDayListRes(val days: List<DcrDayDto>)
+@Serializable
+data class DcrDayReq(
+    val date: String,
+    val workTypeI: String? = null,
+    val workTypeII: String? = null,
+    val placeOfWork: String? = null,
+    val baseTownOnOs: String? = null,
+    val routeNoInSvl: String? = null,
+    val kmTravelled: Double? = null,
+    val dfrNo: Int? = null,
 )
 
 @Serializable

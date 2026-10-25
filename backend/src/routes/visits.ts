@@ -20,6 +20,12 @@ const visitSchema = z.object({
   jointWithUserId: z.string().optional(),
   productsDiscussed: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  pobValue: z.number().optional().nullable(),
+  paymentCollected: z.number().optional().nullable(),
+  expiryAmount: z.number().optional().nullable(),
+  breakageAmount: z.number().optional().nullable(),
+  overdueOutstanding: z.number().optional().nullable(),
+  orderValue: z.number().optional().nullable(),
 });
 
 router.post('/', async (req, res) => {
@@ -48,6 +54,12 @@ router.post('/', async (req, res) => {
       jointWithUserId: data.jointWithUserId,
       productsDiscussed: data.productsDiscussed ?? [],
       notes: data.notes,
+      pobValue: data.pobValue ?? null,
+      paymentCollected: data.paymentCollected ?? null,
+      expiryAmount: data.expiryAmount ?? null,
+      breakageAmount: data.breakageAmount ?? null,
+      overdueOutstanding: data.overdueOutstanding ?? null,
+      orderValue: data.orderValue ?? null,
     },
   });
   res.status(201).json({ visit });
@@ -80,7 +92,12 @@ router.get('/', async (req, res) => {
     where,
     orderBy: { checkInAt: 'desc' },
     include: {
-      client: { select: { id: true, name: true, type: true } },
+      client: {
+        select: {
+          id: true, name: true, type: true,
+          speciality: true, address: true, city: true, phone: true,
+        },
+      },
       user: { select: { id: true, name: true } },
     },
     take: 500,

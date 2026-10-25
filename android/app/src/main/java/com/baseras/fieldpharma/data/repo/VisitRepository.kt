@@ -8,6 +8,15 @@ import com.baseras.fieldpharma.sync.SyncTrigger
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
+data class VisitMoney(
+    val pobValue: Double? = null,
+    val paymentCollected: Double? = null,
+    val expiryAmount: Double? = null,
+    val breakageAmount: Double? = null,
+    val overdueOutstanding: Double? = null,
+    val orderValue: Double? = null,
+)
+
 class VisitRepository(
     private val api: Api,
     private val dao: VisitDao,
@@ -36,7 +45,13 @@ class VisitRepository(
     }
 
     /** Mark visit completed locally, then try to push to server. */
-    suspend fun checkOut(localId: Long, lat: Double?, lng: Double?, jointWithUserId: String? = null) {
+    suspend fun checkOut(
+        localId: Long,
+        lat: Double?,
+        lng: Double?,
+        jointWithUserId: String? = null,
+        money: VisitMoney = VisitMoney(),
+    ) {
         val v = dao.get(localId) ?: return
         val updated = v.copy(
             checkOutAt = Instant.now().toString(),
@@ -44,6 +59,12 @@ class VisitRepository(
             checkOutLng = lng,
             state = "COMPLETED",
             jointWithUserId = jointWithUserId ?: v.jointWithUserId,
+            pobValue = money.pobValue ?: v.pobValue,
+            paymentCollected = money.paymentCollected ?: v.paymentCollected,
+            expiryAmount = money.expiryAmount ?: v.expiryAmount,
+            breakageAmount = money.breakageAmount ?: v.breakageAmount,
+            overdueOutstanding = money.overdueOutstanding ?: v.overdueOutstanding,
+            orderValue = money.orderValue ?: v.orderValue,
         )
         dao.update(updated)
         trySync(updated)
@@ -72,6 +93,12 @@ class VisitRepository(
                 notes = v.notes,
                 isJointWork = v.jointWithUserId != null,
                 jointWithUserId = v.jointWithUserId,
+                pobValue = v.pobValue,
+                paymentCollected = v.paymentCollected,
+                expiryAmount = v.expiryAmount,
+                breakageAmount = v.breakageAmount,
+                overdueOutstanding = v.overdueOutstanding,
+                orderValue = v.orderValue,
             ))
             dao.markSynced(v.localId, res.visit.id)
             true

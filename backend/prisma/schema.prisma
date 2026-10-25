@@ -137,6 +137,7 @@ model User {
   role         Role
   employeeCode String?  @unique
   grade        String?  // Tier for TA/DA, e.g., "MR1", "ASM", "RSM"
+  hq           String?  // Head-quarter city, printed on DCR header (e.g., "SATNA")
   managerId    String?
   manager      User?    @relation("Hierarchy", fields: [managerId], references: [id])
   reports      User[]   @relation("Hierarchy")
@@ -146,6 +147,7 @@ model User {
   attendance          Attendance[]
   tourPlans           TourPlan[]
   visits              Visit[]
+  dcrDays             DcrDay[]
   expenses            Expense[]
   sampleIssues        SampleIssue[]
   sampleDistributions SampleDistribution[]
@@ -266,12 +268,44 @@ model Visit {
   productsDiscussed   String[]
   notes               String?
   edetailViewedSlides Json?     // {slideId: durationSeconds}
+  // DCR order columns. POB applies to doctors/chemists/stockists;
+  // the rest apply to STOCKIST visits.
+  pobValue            Decimal?  @db.Decimal(12, 2)
+  paymentCollected    Decimal?  @db.Decimal(12, 2)
+  expiryAmount        Decimal?  @db.Decimal(12, 2)
+  breakageAmount      Decimal?  @db.Decimal(12, 2)
+  overdueOutstanding  Decimal?  @db.Decimal(12, 2)
+  orderValue          Decimal?  @db.Decimal(12, 2)
   createdAt           DateTime  @default(now())
 
   sampleDistributions SampleDistribution[]
 
   @@index([userId, checkInAt])
   @@index([clientId])
+}
+
+// ───────────────────────── DCR day metadata ─────────────────────────
+// One row per (user, date) carrying the header fields printed on the top
+// of the Daily Field Report: type of work (Indp/Joint/Meeting + Local/Ex/OS),
+// place of work, KM travelled, base town on OS, SVL route no. Visits for
+// that date fill in the rest.
+model DcrDay {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  date          DateTime @db.Date
+  workTypeI     String?  // INDP | JOINT | MEETING
+  workTypeII    String?  // LOCAL | EX | OS
+  placeOfWork   String?
+  baseTownOnOs  String?
+  routeNoInSvl  String?
+  kmTravelled   Float?
+  dfrNo         Int?     // sequential sheet number for the month
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
 
 // ───────────────────────── Expenses (TA / DA / Actuals) ─────────────────────────

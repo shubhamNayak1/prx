@@ -32,7 +32,9 @@ import com.baseras.fieldpharma.ui.home.HomeRouter
 import com.baseras.fieldpharma.ui.more.MoreScreen
 import com.baseras.fieldpharma.ui.more.MoreVariant
 import com.baseras.fieldpharma.ui.plan.AssignPlanScreen
+import com.baseras.fieldpharma.ui.reports.DcrDownloadScreen
 import com.baseras.fieldpharma.ui.reports.ReportsScreen
+import com.baseras.fieldpharma.ui.dcr.DcrDayScreen
 import com.baseras.fieldpharma.ui.team.TeamScreen
 import com.baseras.fieldpharma.ui.locked.LockedScreen
 import com.baseras.fieldpharma.ui.login.LoginScreen
@@ -72,6 +74,8 @@ object Routes {
     const val COMPANY_PROFILE = "settings/company"
     const val EXPENSE_POLICIES = "settings/expense-policies"
     const val ASSIGN_PLAN = "assign-plan"
+    const val DCR_DOWNLOAD = "reports/dcr"
+    const val DCR_DAY = "dcr/day"
 
     fun approvals(filter: String? = null) =
         if (filter == null) "approvals?filter=" else "approvals?filter=$filter"
@@ -203,7 +207,10 @@ fun AppNav() {
             BillingScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.REPORTS) {
-            ReportsScreen(onBack = { nav.popBackStack() })
+            ReportsScreen(
+                onBack = { nav.popBackStack() },
+                onDcrDownload = { nav.navigate(Routes.DCR_DOWNLOAD) },
+            )
         }
         composable(Routes.MORE) {
             val role = app.authRepo.current?.role ?: "FIELD_PERSON"
@@ -227,6 +234,8 @@ fun AppNav() {
                 onReports = { nav.navigate(Routes.REPORTS) },
                 onInvite = { nav.navigate(Routes.INVITE) },
                 onHelp = { nav.navigate(Routes.HELP) },
+                onDcrDay = { nav.navigate(Routes.DCR_DAY) },
+                onDcrDownload = { nav.navigate(Routes.DCR_DOWNLOAD) },
                 onLogout = {
                     app.authRepo.logout()
                     nav.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
@@ -260,6 +269,12 @@ fun AppNav() {
         }
         composable(Routes.ASSIGN_PLAN) {
             AssignPlanScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.DCR_DOWNLOAD) {
+            DcrDownloadScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.DCR_DAY) {
+            DcrDayScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.PROFILE) {
             ProfileScreen(
