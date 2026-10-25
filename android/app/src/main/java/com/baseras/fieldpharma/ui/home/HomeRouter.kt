@@ -18,6 +18,8 @@ fun HomeRouter(
     onReports: () -> Unit,
     onInvite: () -> Unit,
     onAssignPlan: () -> Unit,
+    onJointWork: () -> Unit,
+    onExpensePolicies: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -27,6 +29,7 @@ fun HomeRouter(
             onPeople = onTeam,
             onInvite = onInvite,
             onBilling = onBilling,
+            onExpensePolicies = onExpensePolicies,
             onMore = onMore,
             onLogout = onLogout,
         )
@@ -34,6 +37,7 @@ fun HomeRouter(
             onApprovals = onApprovals,
             onRegions = onTeam,
             onReports = onReports,
+            onJointWork = onJointWork,
             onMore = onMore,
             onLogout = onLogout,
         )
@@ -41,6 +45,7 @@ fun HomeRouter(
             onApprovals = onApprovals,
             onTeam = onTeam,
             onAssignPlan = onAssignPlan,
+            onJointWork = onJointWork,
             onMore = onMore,
             onLogout = onLogout,
         )

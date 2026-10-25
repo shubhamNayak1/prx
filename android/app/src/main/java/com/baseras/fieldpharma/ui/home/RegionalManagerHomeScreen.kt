@@ -50,6 +50,7 @@ fun RegionalManagerHomeScreen(
     onApprovals: () -> Unit,
     onTeam: () -> Unit,
     onAssignPlan: () -> Unit,
+    onJointWork: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -90,6 +91,7 @@ fun RegionalManagerHomeScreen(
         onApprovals = onApprovals,
         onTeam = onTeam,
         onAssignPlan = onAssignPlan,
+        onJointWork = onJointWork,
         onMore = onMore,
         onLogout = onLogout,
     )
@@ -104,6 +106,7 @@ private fun RmHomeScaffold(
     onApprovals: () -> Unit,
     onTeam: () -> Unit,
     onAssignPlan: () -> Unit,
+    onJointWork: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -183,6 +186,9 @@ private fun RmHomeScaffold(
                         ),
                         com.baseras.fieldpharma.ui.components.QuickAction(
                             "Approvals", Icons.Default.FactCheck, onApprovals,
+                        ),
+                        com.baseras.fieldpharma.ui.components.QuickAction(
+                            "Joint work", Icons.Default.PersonSearch, onJointWork,
                         ),
                         com.baseras.fieldpharma.ui.components.QuickAction(
                             "My team", Icons.Default.People, onTeam,
@@ -409,7 +415,7 @@ private fun RmHomePreview() {
                     TeamMember("Neha Gupta", "Field · Delhi", TeamMemberStatus.Flagged, "Out of radius ×2"),
                 ),
             ),
-            onApprovals = {}, onTeam = {}, onAssignPlan = {}, onMore = {}, onLogout = {},
+            onApprovals = {}, onTeam = {}, onAssignPlan = {}, onJointWork = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -431,7 +437,7 @@ private fun RmHomeEmptyPreview() {
                 pendingClients = 0,
                 team = emptyList(),
             ),
-            onApprovals = {}, onTeam = {}, onAssignPlan = {}, onMore = {}, onLogout = {},
+            onApprovals = {}, onTeam = {}, onAssignPlan = {}, onJointWork = {}, onMore = {}, onLogout = {},
         )
     }
 }

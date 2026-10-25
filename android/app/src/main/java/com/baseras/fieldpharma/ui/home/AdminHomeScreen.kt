@@ -49,6 +49,7 @@ fun AdminHomeScreen(
     onPeople: () -> Unit,
     onInvite: () -> Unit,
     onBilling: () -> Unit,
+    onExpensePolicies: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -77,6 +78,7 @@ fun AdminHomeScreen(
         onPeople = onPeople,
         onInvite = onInvite,
         onBilling = onBilling,
+        onExpensePolicies = onExpensePolicies,
         onMore = onMore,
         onLogout = onLogout,
     )
@@ -91,6 +93,7 @@ private fun AdminHomeScaffold(
     onPeople: () -> Unit,
     onInvite: () -> Unit,
     onBilling: () -> Unit,
+    onExpensePolicies: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -213,7 +216,13 @@ private fun AdminHomeScaffold(
             // ─── setup checklist (first-run) ───
             if (state.totalUsers <= 1) {
                 item { SectionHeader("Finish setup") }
-                item { OnboardingChecklist(onPeople = onPeople) }
+                item {
+                    OnboardingChecklist(
+                        onPeople = onPeople,
+                        onExpensePolicies = onExpensePolicies,
+                        onBilling = onBilling,
+                    )
+                }
             }
 
             item { Spacer(Modifier.height(sp.lg)) }
@@ -350,7 +359,11 @@ private fun CompanyHero(
 }
 
 @Composable
-private fun OnboardingChecklist(onPeople: () -> Unit) {
+private fun OnboardingChecklist(
+    onPeople: () -> Unit,
+    onExpensePolicies: () -> Unit,
+    onBilling: () -> Unit,
+) {
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
@@ -359,9 +372,8 @@ private fun OnboardingChecklist(onPeople: () -> Unit) {
     ) {
         Column(Modifier.padding(14.dp)) {
             ChecklistRow(Icons.Default.PersonAdd, "Invite your first Senior Manager", "Starts the hierarchy", onPeople)
-            ChecklistRow(Icons.Default.LocalHospital, "Add client master data", "Doctors, chemists, stockists") { /* TODO */ }
-            ChecklistRow(Icons.Default.Receipt, "Set TA / DA rates per grade", "So expenses auto-calculate") { /* TODO */ }
-            ChecklistRow(Icons.Default.CreditCard, "Pick a billing cycle", "Monthly, quarterly or annual") { /* TODO */ }
+            ChecklistRow(Icons.Default.Receipt, "Set TA / DA rates per grade", "So expenses auto-calculate", onExpensePolicies)
+            ChecklistRow(Icons.Default.CreditCard, "Pick a billing cycle", "Monthly, quarterly or annual", onBilling)
         }
     }
 }
@@ -425,7 +437,7 @@ private fun AdminHomePreviewTrial() {
                 pendingSignups = 0,
                 billing = BillingSnapshot(BillingStatus.TRIAL, cycle = null, trialEndsAt = null, fetchedAt = 0L),
             ),
-            onPeople = {}, onInvite = {}, onBilling = {}, onMore = {}, onLogout = {},
+            onPeople = {}, onInvite = {}, onBilling = {}, onExpensePolicies = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -445,7 +457,7 @@ private fun AdminHomePreviewActive() {
                 pendingSignups = 3,
                 billing = BillingSnapshot(BillingStatus.ACTIVE, cycle = "ANNUAL", trialEndsAt = null, fetchedAt = 0L),
             ),
-            onPeople = {}, onInvite = {}, onBilling = {}, onMore = {}, onLogout = {},
+            onPeople = {}, onInvite = {}, onBilling = {}, onExpensePolicies = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -465,7 +477,7 @@ private fun AdminHomePreviewLocked() {
                 pendingSignups = 0,
                 billing = BillingSnapshot(BillingStatus.LOCKED, cycle = null, trialEndsAt = null, fetchedAt = 0L),
             ),
-            onPeople = {}, onInvite = {}, onBilling = {}, onMore = {}, onLogout = {},
+            onPeople = {}, onInvite = {}, onBilling = {}, onExpensePolicies = {}, onMore = {}, onLogout = {},
         )
     }
 }

@@ -8,6 +8,7 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.PATCH
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -98,6 +99,12 @@ interface Api {
 
     @GET("/api/expense-policies/me")
     suspend fun myExpensePolicy(): ExpensePolicyRes
+
+    @GET("/api/expense-policies")
+    suspend fun listExpensePolicies(): ExpensePolicyListRes
+
+    @PUT("/api/expense-policies")
+    suspend fun upsertExpensePolicy(@Body req: ExpensePolicyUpsertReq): ExpensePolicyRes
 
     @GET("/api/samples/balance")
     suspend fun sampleBalance(): SampleBalanceRes
@@ -455,6 +462,13 @@ data class ExpensePolicyDto(
 )
 
 @Serializable data class ExpensePolicyRes(val policy: ExpensePolicyDto?)
+@Serializable data class ExpensePolicyListRes(val policies: List<ExpensePolicyDto>)
+@Serializable
+data class ExpensePolicyUpsertReq(
+    val grade: String,
+    val taRatePerKm: Double,
+    val daFlatRate: Double,
+)
 
 @Serializable
 data class SampleProductDto(

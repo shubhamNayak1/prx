@@ -112,12 +112,18 @@ class ApprovalsViewModel(private val api: Api) : ViewModel() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ApprovalsScreen(onBack: () -> Unit) {
+fun ApprovalsScreen(
+    onBack: () -> Unit,
+    initialFilter: ApprovalFilter = ApprovalFilter.All,
+) {
     val app = FieldPharmaApp.instance
     val vm: ApprovalsViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
         addInitializer(ApprovalsViewModel::class) { ApprovalsViewModel(app.api) }
     })
     val state by vm.state.collectAsState()
+    LaunchedEffect(initialFilter) {
+        if (initialFilter != ApprovalFilter.All) vm.setFilter(initialFilter)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

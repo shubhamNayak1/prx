@@ -57,6 +57,7 @@ fun SeniorManagerHomeScreen(
     onApprovals: () -> Unit,
     onRegions: () -> Unit,
     onReports: () -> Unit,
+    onJointWork: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -92,6 +93,7 @@ fun SeniorManagerHomeScreen(
         onApprovals = onApprovals,
         onRegions = onRegions,
         onReports = onReports,
+        onJointWork = onJointWork,
         onMore = onMore,
         onLogout = onLogout,
     )
@@ -106,6 +108,7 @@ private fun SmHomeScaffold(
     onApprovals: () -> Unit,
     onRegions: () -> Unit,
     onReports: () -> Unit,
+    onJointWork: () -> Unit,
     onMore: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -180,9 +183,9 @@ private fun SmHomeScaffold(
                 QuickActionsRow(
                     actions = listOf(
                         QuickAction("Approvals", Icons.Default.FactCheck, onApprovals),
+                        QuickAction("Joint work", Icons.Default.PersonSearch, onJointWork),
                         QuickAction("Reports", Icons.Default.Analytics, onReports),
-                        QuickAction("Joint work", Icons.Default.PersonSearch) { /* TODO */ },
-                        QuickAction("Messages", Icons.Default.ChatBubbleOutline) { /* TODO */ },
+                        QuickAction("Regions", Icons.Default.Map, onRegions),
                     ),
                 )
             }
@@ -419,7 +422,7 @@ private fun SmHomePreview() {
                     RegionSummary("Vikram Shah",   "North · 12 reps", 10, 12, 69, pendingApprovals = 0),
                 ),
             ),
-            onApprovals = {}, onRegions = {}, onReports = {}, onMore = {}, onLogout = {},
+            onApprovals = {}, onRegions = {}, onReports = {}, onJointWork = {}, onMore = {}, onLogout = {},
         )
     }
 }
@@ -434,7 +437,7 @@ private fun SmHomeEmptyPreview() {
                 callsMtd = 0, callsPlannedMtd = 0, attainmentPct = 0,
                 pendingEscalations = 0, regions = emptyList(),
             ),
-            onApprovals = {}, onRegions = {}, onReports = {}, onMore = {}, onLogout = {},
+            onApprovals = {}, onRegions = {}, onReports = {}, onJointWork = {}, onMore = {}, onLogout = {},
         )
     }
 }

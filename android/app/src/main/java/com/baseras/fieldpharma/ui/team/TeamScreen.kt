@@ -77,9 +77,10 @@ fun TeamScreen(onBack: () -> Unit) {
     //   Admin → whole active company
     //   Managers → descendants in the tree
     //   Field → just themselves (edge case)
-    val visibleTree = remember(state.users, state.myUserId, state.myRole) {
-        if (state.users.isEmpty() || state.myUserId == null) emptyList()
-        else buildVisibleTree(state.users, state.myUserId!!, state.myRole)
+    val visibleTree: List<TreeNode> = remember(state.users, state.myUserId, state.myRole) {
+        if (state.users.isEmpty()) emptyList()
+        else runCatching { buildVisibleTree(state.users, state.myUserId, state.myRole) }
+            .getOrElse { emptyList() }
     }
 
     Scaffold(
@@ -87,14 +88,9 @@ fun TeamScreen(onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("My team", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "${visibleTree.size} ${if (visibleTree.size == 1) "member" else "members"}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    val suffix = if (visibleTree.isEmpty()) "" else
+                        " · ${visibleTree.size} ${if (visibleTree.size == 1) "member" else "members"}"
+                    Text("My team$suffix", style = MaterialTheme.typography.titleLarge)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -139,23 +135,29 @@ private data class TreeNode(
     val directReports: Int,
 )
 
-private fun buildVisibleTree(all: List<UserRow>, myId: String, myRole: String): List<TreeNode> {
+private fun buildVisibleTree(all: List<UserRow>, myId: String?, myRole: String): List<TreeNode> {
     val active = all.filter { it.isActive }
+    if (active.isEmpty()) return emptyList()
+    val byId = active.associateBy { it.id }
     val byParent = active.groupBy { it.managerId }
 
     val startIds: List<String> = when (myRole) {
-        "ADMIN" -> active.filter { it.managerId == null || it.managerId == myId }.map { it.id }
-        else -> byParent[myId]?.map { it.id } ?: emptyList()
+        "ADMIN" -> active.filter { it.managerId == null || it.managerId == myId }
+            .map { it.id }
+            .distinct()
+        else -> if (myId == null) emptyList() else byParent[myId]?.map { it.id }.orEmpty()
     }
 
     val out = mutableListOf<TreeNode>()
+    val seen = mutableSetOf<String>()
     fun walk(id: String, depth: Int) {
-        val row = active.firstOrNull { it.id == id } ?: return
+        if (!seen.add(id)) return
+        val row = byId[id] ?: return
         val children = byParent[id].orEmpty()
         out += TreeNode(row = row, depth = depth, directReports = children.size)
         children.sortedBy { it.name }.forEach { walk(it.id, depth + 1) }
     }
-    startIds.sortedBy { active.firstOrNull { u -> u.id == it }?.name ?: "" }.forEach { walk(it, 0) }
+    startIds.sortedBy { byId[it]?.name ?: "" }.forEach { walk(it, 0) }
     return out
 }
 

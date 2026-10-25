@@ -22,8 +22,10 @@ import com.baseras.fieldpharma.ui.help.HelpScreen
 import com.baseras.fieldpharma.ui.invite.InviteUserScreen
 import com.baseras.fieldpharma.ui.profile.ProfileScreen
 import com.baseras.fieldpharma.ui.settings.CompanyProfileScreen
+import com.baseras.fieldpharma.ui.settings.ExpensePoliciesScreen
 import com.baseras.fieldpharma.ui.settings.SettingsScreen
 import com.baseras.fieldpharma.ui.settings.SettingsVariant
+import com.baseras.fieldpharma.ui.approvals.ApprovalFilter
 import com.baseras.fieldpharma.ui.approvals.ApprovalsScreen
 import com.baseras.fieldpharma.ui.billing.BillingScreen
 import com.baseras.fieldpharma.ui.home.HomeRouter
@@ -58,7 +60,7 @@ object Routes {
     const val DECK_VIEWER = "edetail/{deckId}"
     const val RCPA = "rcpa"
     const val RCPA_NEW = "rcpa/new"
-    const val APPROVALS = "approvals"
+    const val APPROVALS = "approvals?filter={filter}"
     const val TEAM = "team"
     const val BILLING = "billing"
     const val MORE = "more"
@@ -68,7 +70,11 @@ object Routes {
     const val PROFILE = "profile"
     const val HELP = "help"
     const val COMPANY_PROFILE = "settings/company"
+    const val EXPENSE_POLICIES = "settings/expense-policies"
     const val ASSIGN_PLAN = "assign-plan"
+
+    fun approvals(filter: String? = null) =
+        if (filter == null) "approvals?filter=" else "approvals?filter=$filter"
 
     fun visits(clientId: String? = null) =
         if (clientId == null) "visits?clientId=" else "visits?clientId=$clientId"
@@ -158,12 +164,14 @@ fun AppNav() {
                 onSamples = { nav.navigate(Routes.SAMPLES) },
                 onEdetail = { nav.navigate(Routes.EDETAIL) },
                 onRcpa = { nav.navigate(Routes.RCPA) },
-                onApprovals = { nav.navigate(Routes.APPROVALS) },
+                onApprovals = { nav.navigate(Routes.approvals()) },
                 onTeam = { nav.navigate(Routes.TEAM) },
                 onBilling = { nav.navigate(Routes.BILLING) },
                 onReports = { nav.navigate(Routes.REPORTS) },
                 onInvite = { nav.navigate(Routes.INVITE) },
                 onAssignPlan = { nav.navigate(Routes.ASSIGN_PLAN) },
+                onJointWork = { nav.navigate(Routes.approvals("joint")) },
+                onExpensePolicies = { nav.navigate(Routes.EXPENSE_POLICIES) },
                 onMore = { nav.navigate(Routes.MORE) },
                 onLogout = {
                     app.authRepo.logout()
@@ -171,8 +179,22 @@ fun AppNav() {
                 },
             )
         }
-        composable(Routes.APPROVALS) {
-            ApprovalsScreen(onBack = { nav.popBackStack() })
+        composable(
+            route = Routes.APPROVALS,
+            arguments = listOf(navArgument("filter") {
+                type = NavType.StringType
+                defaultValue = ""
+                nullable = true
+            }),
+        ) { entry ->
+            val filterArg = entry.arguments?.getString("filter").orEmpty()
+            val initialFilter = when (filterArg) {
+                "joint" -> ApprovalFilter.JointWork
+                "plans" -> ApprovalFilter.TourPlans
+                "expenses" -> ApprovalFilter.Expenses
+                else -> ApprovalFilter.All
+            }
+            ApprovalsScreen(onBack = { nav.popBackStack() }, initialFilter = initialFilter)
         }
         composable(Routes.TEAM) {
             TeamScreen(onBack = { nav.popBackStack() })
@@ -225,13 +247,16 @@ fun AppNav() {
                 variant = variant,
                 onBack = { nav.popBackStack() },
                 onCompanyProfile = { nav.navigate(Routes.COMPANY_PROFILE) },
-                onExpensePolicies = { /* TODO: standalone screen */ },
+                onExpensePolicies = { nav.navigate(Routes.EXPENSE_POLICIES) },
                 onHierarchy = { nav.navigate(Routes.TEAM) },
                 onBilling = { nav.navigate(Routes.BILLING) },
             )
         }
         composable(Routes.COMPANY_PROFILE) {
             CompanyProfileScreen(onBack = { nav.popBackStack() })
+        }
+        composable(Routes.EXPENSE_POLICIES) {
+            ExpensePoliciesScreen(onBack = { nav.popBackStack() })
         }
         composable(Routes.ASSIGN_PLAN) {
             AssignPlanScreen(onBack = { nav.popBackStack() })
